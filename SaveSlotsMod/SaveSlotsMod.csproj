@@ -1,0 +1,104 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>SaveSlotsMod</AssemblyName>
+    <RootNamespace>SaveSlotsMod</RootNamespace>
+    <LangVersion>9</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!--
+      Set GameFolder to your Inscryption installation directory.
+      You can either edit it here, or pass it on the command line:
+        dotnet build -c Release /p:GameFolder="D:\FIleENG\Inscryption"
+    -->
+    <GameFolder Condition="'$(GameFolder)' == ''">D:\FIleENG\Inscryption</GameFolder>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ── BepInEx ───────────────────────────────────────────────────────── -->
+    <Reference Include="BepInEx">
+      <HintPath>$(GameFolder)\BepInEx\core\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(GameFolder)\BepInEx\core\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- ── Unity core ────────────────────────────────────────────────────── -->
+    <Reference Include="UnityEngine">
+      <HintPath>$(GameFolder)\Inscryption_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(GameFolder)\Inscryption_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Canvas, CanvasScaler, GraphicRaycaster, RenderMode, ScrollRect, etc. -->
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(GameFolder)\Inscryption_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- UnityEngine.UI.Button, Image, Text, LayoutGroup … -->
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(GameFolder)\Inscryption_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- FontStyle, TextAnchor, Font, Text component -->
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(GameFolder)\Inscryption_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Button.onClick (ButtonClickedEvent), EventTrigger -->
+    <Reference Include="UnityEngine.EventSystems">
+      <HintPath>$(GameFolder)\Inscryption_Data\Managed\UnityEngine.EventSystems.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- RectMask2D, ContentSizeFitter, VerticalLayoutGroup, LayoutElement -->
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(GameFolder)\Inscryption_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(GameFolder)\Inscryption_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- ── InscryptionAPI ───────────────────────────────────────────────── -->
+    <!--
+      Thunderstore/r2modman installs the DLL directly into BepInEx\plugins\.
+      Manual installs sometimes use BepInEx\plugins\API\ or BepInEx\plugins\InscryptionAPI\.
+      All three paths are listed; MSBuild uses whichever one exists.
+    -->
+    <Reference Include="InscryptionAPI"
+               Condition="Exists('$(GameFolder)\BepInEx\plugins\InscryptionAPI.dll')">
+      <HintPath>$(GameFolder)\BepInEx\plugins\InscryptionAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="InscryptionAPI"
+               Condition="!Exists('$(GameFolder)\BepInEx\plugins\InscryptionAPI.dll') And
+                           Exists('$(GameFolder)\BepInEx\plugins\API\InscryptionAPI.dll')">
+      <HintPath>$(GameFolder)\BepInEx\plugins\API\InscryptionAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="InscryptionAPI"
+               Condition="!Exists('$(GameFolder)\BepInEx\plugins\InscryptionAPI.dll') And
+                          !Exists('$(GameFolder)\BepInEx\plugins\API\InscryptionAPI.dll') And
+                           Exists('$(GameFolder)\BepInEx\plugins\InscryptionAPI\InscryptionAPI.dll')">
+      <HintPath>$(GameFolder)\BepInEx\plugins\InscryptionAPI\InscryptionAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- ── Game assembly ─────────────────────────────────────────────────── -->
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(GameFolder)\Inscryption_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>
