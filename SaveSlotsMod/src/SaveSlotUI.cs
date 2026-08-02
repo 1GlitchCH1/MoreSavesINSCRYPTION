@@ -7,8 +7,7 @@ using UnityEngine;
 namespace SaveSlotsMod
 {
     // ─────────────────────────────────────────────────────────────────────────────
-    // Intercept right before TransitionToGame coroutine is started.
-    // Patching TransitionToGame itself caused StartCoroutine(null) crash.
+    // Перехват перед запуском корутины TransitionToGame.
     // ─────────────────────────────────────────────────────────────────────────────
     [HarmonyPatch(typeof(MenuController), "OnStartGameCardReachedSlot")]
     internal static class MenuController_OnStartGameCardReachedSlot_Patch
@@ -17,8 +16,8 @@ namespace SaveSlotsMod
         {
             if (MenuPatches.PassingThrough) return true;
 
-            // Backup current live save BEFORE showing the picker,
-            // so the active slot shows up-to-date data.
+            // Делаем резервную копию живого сохранения ДО показа пикера,
+            // чтобы активный слот отображал актуальные данные.
             SaveSlotManager.BackupLiveSave();
 
             MenuPatches.Intercept(__instance);
@@ -44,7 +43,7 @@ namespace SaveSlotsMod
             SaveSlotUIBehaviour.Show();
         }
 
-        /// <summary>Load chosen slot and trigger the game transition.</summary>
+        /// <summary>Загружает выбранный слот и запускает переход в игру.</summary>
         public static void Proceed()
         {
             if (_menu == null) return;
@@ -52,8 +51,6 @@ namespace SaveSlotsMod
             try
             {
                 SaveManager.LoadFromFile();
-                // With PassingThrough=true the prefix returns true → original runs →
-                // StartCoroutine(TransitionToGame()) works normally.
                 AccessTools.Method(typeof(MenuController), "OnStartGameCardReachedSlot")
                            ?.Invoke(_menu, null);
             }
@@ -62,8 +59,7 @@ namespace SaveSlotsMod
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // IMGUI slot picker — no Canvas, no EventSystem, no RectTransform headaches.
-    // OnGUI renders above all world-space objects automatically.
+    // IMGUI пикер слотов — без Canvas, без EventSystem.
     // ─────────────────────────────────────────────────────────────────────────────
     public class SaveSlotUIBehaviour : MonoBehaviour
     {
@@ -73,19 +69,23 @@ namespace SaveSlotsMod
         private int      _pendingSlot = -1;
         private string   _warningText  = "";
 
-        // Solid-colour textures for backgrounds/buttons
+        // Текстуры для фонов / кнопок
         private Texture2D? _txDark;
         private Texture2D? _txRow;
+        private Texture2D? _txRowMain; // Особый фон для Слота 1 (основного)
         private Texture2D? _txBlue;
+        private Texture2D? _txGold;   // Цвет кнопки для основного сохранения
         private Texture2D? _txRed;
         private Texture2D? _txGray;
         private Texture2D? _txOverlay;
 
-        // GUIStyles — built once in first OnGUI call
+        // GUIStyles — создаются один раз
         private GUIStyle? _stTitle;
         private GUIStyle? _stSlotName;
+        private GUIStyle? _stSlotNameMain; // Жирный золотой для основного слота
         private GUIStyle? _stSlotInfo;
         private GUIStyle? _stBtnLoad;
+        private GUIStyle? _stBtnLoadGold; // Кнопка «Загрузить» для основного слота
         private GUIStyle? _stBtnDel;
         private GUIStyle? _stBtnGray;
         private GUIStyle? _stBodyText;
@@ -109,7 +109,6 @@ namespace SaveSlotsMod
         {
             EnsureStyles();
 
-            // Dim the whole screen
             GUI.color = Color.white;
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), _txOverlay!);
 
@@ -117,23 +116,19 @@ namespace SaveSlotsMod
             else              DrawPicker();
         }
 
-        // ── Slot picker ───────────────────────────────────────────────────────────
+        // ── Пикер слотов ──────────────────────────────────────────────────────────
         private void DrawPicker()
         {
-            const float PW = 560f;
+            const float PW    = 580f;
             const float ROW_H = 78f, ROW_GAP = 8f;
             float rowsTotal = SaveSlotManager.MaxSlots * (ROW_H + ROW_GAP) - ROW_GAP;
-            // Title + padding + rows + cancel button row + bottom padding
             float ph = 16 + 34 + 12 + rowsTotal + 14 + 44 + 14;
             float px = (Screen.width  - PW) / 2f;
             float py = (Screen.height - ph) / 2f;
 
             GUI.DrawTexture(new Rect(px, py, PW, ph), _txDark!);
-
-            // ── Title ──────────────────────────────────────────────────────────────
             GUI.Label(new Rect(px, py + 14, PW, 34), "— Выбери файл сохранения —", _stTitle!);
 
-            // ── Slot rows ──────────────────────────────────────────────────────────
             float ry = py + 14 + 34 + 12;
             for (int i = 0; i < SaveSlotManager.MaxSlots; i++)
             {
@@ -141,64 +136,79 @@ namespace SaveSlotsMod
                 ry += ROW_H + ROW_GAP;
             }
 
-            // ── Cancel button ──────────────────────────────────────────────────────
-            float cancelY = ry + 14;
             float cancelW = 200f, cancelH = 40f;
             float cancelX = px + (PW - cancelW) / 2f;
+            float cancelY = ry + 14;
             if (GUI.Button(new Rect(cancelX, cancelY, cancelW, cancelH),
                            "← Назад в меню", _stBtnGray!))
-            {
                 OnCancel();
-            }
         }
 
+        // ── Строка слота ──────────────────────────────────────────────────────────
         private void DrawSlotRow(int slot, float rx, float ry, float rw, float rh)
         {
-            GUI.DrawTexture(new Rect(rx, ry, rw, rh), _txRow!);
+            bool isMainSave = SaveSlotManager.IsMainSaveSlot(slot);
+            bool hasSave    = SaveSlotManager.SlotHasSave(slot);
+            var  meta       = hasSave ? SaveSlotManager.LoadSlotMeta(slot) : null;
 
-            bool hasSave = SaveSlotManager.SlotHasSave(slot);
-            var  meta    = hasSave ? SaveSlotManager.LoadSlotMeta(slot) : null;
+            // Фон строки: немного другой для основного сохранения
+            GUI.DrawTexture(new Rect(rx, ry, rw, rh), isMainSave ? _txRowMain! : _txRow!);
 
-            // Labels
             float textX = rx + 14;
-            GUI.Label(new Rect(textX, ry + 8,  240, 24), $"Слот {slot + 1}", _stSlotName!);
 
-            string info = hasSave
-                ? (meta != null
+            // ── Название слота ────────────────────────────────────────────────────
+            string slotLabel = isMainSave
+                ? "Слот 1   ★  Основное сохранение"
+                : $"Слот {slot + 1}";
+            GUI.Label(
+                new Rect(textX, ry + 8, 320, 24),
+                slotLabel,
+                isMainSave ? _stSlotNameMain! : _stSlotName!);
+
+            // ── Информация о сохранении ───────────────────────────────────────────
+            string info;
+            if (hasSave)
+                info = meta != null
                     ? $"{meta.LastSaved.ToLocalTime():dd.MM.yyyy  HH:mm}   •   {meta.ModGuids.Count} мод(ов)"
-                    : "Сохранение (нет данных о модах)")
-                : "Пустой слот";
-            GUI.Label(new Rect(textX, ry + 34, 300, 22), info, _stSlotInfo!);
+                    : "Сохранение (нет данных о модах)";
+            else
+                info = isMainSave ? "Основного сохранения нет" : "Пустой слот — Новая игра";
+            GUI.Label(new Rect(textX, ry + 34, 320, 22), info, _stSlotInfo!);
 
-            // Buttons on right side
+            // ── Кнопки ────────────────────────────────────────────────────────────
             float btnRight = rx + rw - 10;
             int   cap      = slot;
 
             if (hasSave)
             {
-                // ✕ delete (narrow)
-                float dW = 32f, dH = 36f;
-                float dX = btnRight - dW, dY = ry + (rh - dH) / 2f;
-                if (GUI.Button(new Rect(dX, dY, dW, dH), "✕", _stBtnDel!))
-                    OnDeleteSlot(cap);
-                btnRight -= dW + 6;
+                // Кнопка удаления — НЕ показываем для основного сохранения (Слот 0)
+                if (!isMainSave)
+                {
+                    float dW = 32f, dH = 36f;
+                    float dX = btnRight - dW, dY = ry + (rh - dH) / 2f;
+                    if (GUI.Button(new Rect(dX, dY, dW, dH), "✕", _stBtnDel!))
+                        OnDeleteSlot(cap);
+                    btnRight -= dW + 6;
+                }
 
-                // Load
                 float lW = 106f, lH = 36f;
                 float lX = btnRight - lW, lY = ry + (rh - lH) / 2f;
-                if (GUI.Button(new Rect(lX, lY, lW, lH), "Загрузить", _stBtnLoad!))
+                GUIStyle loadStyle = isMainSave ? _stBtnLoadGold! : _stBtnLoad!;
+                if (GUI.Button(new Rect(lX, lY, lW, lH), "Загрузить", loadStyle))
                     OnSlotChosen(cap);
             }
             else
             {
-                float lW = 126f, lH = 36f;
-                float lX = btnRight - lW, lY = ry + (rh - lH) / 2f;
-                if (GUI.Button(new Rect(lX, lY, lW, lH), "Новая игра", _stBtnLoad!))
+                string btnText = isMainSave ? "Начать игру" : "Новая игра";
+                float  lW = 126f, lH = 36f;
+                float  lX = btnRight - lW, lY = ry + (rh - lH) / 2f;
+                GUIStyle newStyle = isMainSave ? _stBtnLoadGold! : _stBtnLoad!;
+                if (GUI.Button(new Rect(lX, lY, lW, lH), btnText, newStyle))
                     OnSlotChosen(cap);
             }
         }
 
-        // ── Warning dialog ────────────────────────────────────────────────────────
+        // ── Диалог предупреждения о модах ─────────────────────────────────────────
         private void DrawWarning()
         {
             const float WW = 570f, WH = 370f;
@@ -208,25 +218,31 @@ namespace SaveSlotsMod
             GUI.DrawTexture(new Rect(wx, wy, WW, WH), _txDark!);
             GUI.Label(new Rect(wx, wy + 14, WW, 32), "⚠  Несоответствие модов", _stWarnTitle!);
 
-            // Diff text area
             Rect box = new Rect(wx + 14, wy + 58, WW - 28, 210);
             GUI.DrawTexture(box, _txRow!);
-            GUI.Label(new Rect(box.x + 10, box.y + 8, box.width - 20, box.height - 16),
+            GUI.Label(
+                new Rect(box.x + 10, box.y + 8, box.width - 20, box.height - 16),
                 _warningText, _stBodyText!);
 
-            GUI.Label(new Rect(wx, wy + WH - 84, WW, 22),
+            GUI.Label(
+                new Rect(wx, wy + WH - 84, WW, 22),
                 "Вход может привести к нестабильности из-за изменений в модах.", _stHint!);
 
             float btnY = wy + WH - 54;
             float half = WW / 2f;
             if (GUI.Button(new Rect(wx + half - 8 - 164, btnY, 164, 42), "Войти  →", _stBtnLoad!))
-            { _showWarning = false; if (_pendingSlot >= 0) DoSwitch(_pendingSlot); }
-
+            {
+                _showWarning = false;
+                if (_pendingSlot >= 0) DoSwitch(_pendingSlot);
+            }
             if (GUI.Button(new Rect(wx + half + 8, btnY, 164, 42), "Отмена", _stBtnGray!))
-            { _showWarning = false; _pendingSlot = -1; }
+            {
+                _showWarning = false;
+                _pendingSlot = -1;
+            }
         }
 
-        // ── Logic ─────────────────────────────────────────────────────────────────
+        // ── Логика ───────────────────────────────────────────────────────────────
         private void OnSlotChosen(int slot)
         {
             if (!SaveSlotManager.SlotHasSave(slot)) { DoSwitch(slot); return; }
@@ -245,32 +261,32 @@ namespace SaveSlotsMod
                 Plugin.Log.LogError($"[SlotUI] SwitchToSlot({slot}) failed: {ex}");
                 return;
             }
-            Destroy(gameObject);   // clears _instance via OnDestroy
+            Destroy(gameObject); // очищает _instance через OnDestroy
             MenuPatches.Proceed();
         }
 
         private void OnCancel()
         {
-            // Don't switch slots — just proceed with whatever is currently loaded.
             Destroy(gameObject);
             MenuPatches.Proceed();
         }
 
         private void OnDeleteSlot(int slot)
         {
+            if (SaveSlotManager.IsMainSaveSlot(slot)) return; // Защита
             SaveSlotManager.DeleteSlot(slot);
-            // No rebuild needed: OnGUI redraws every frame and reads fresh state.
+            // OnGUI перерисовывает каждый кадр — обновление произойдёт автоматически
         }
 
-        // ── Diff text ─────────────────────────────────────────────────────────────
+        // ── Текст разницы модов ───────────────────────────────────────────────────
         private static string BuildDiffText(ModDiff diff)
         {
             var sb = new StringBuilder();
             if (diff.Added.Count > 0)
             {
                 sb.AppendLine($"[+] Добавлены ({diff.Added.Count}):");
-                foreach (var g in diff.Added) sb.AppendLine($"    + {g}");
-                if (diff.Removed.Count > 0) sb.AppendLine();
+                foreach (var g in diff.Added)   sb.AppendLine($"    + {g}");
+                if (diff.Removed.Count > 0)     sb.AppendLine();
             }
             if (diff.Removed.Count > 0)
             {
@@ -282,12 +298,14 @@ namespace SaveSlotsMod
             return sb.ToString().TrimEnd();
         }
 
-        // ── Textures ──────────────────────────────────────────────────────────────
+        // ── Текстуры ──────────────────────────────────────────────────────────────
         private void CreateTextures()
         {
             _txDark    = MakeTex(new Color(0.07f, 0.07f, 0.10f, 0.97f));
             _txRow     = MakeTex(new Color(0.14f, 0.14f, 0.17f, 0.96f));
+            _txRowMain = MakeTex(new Color(0.16f, 0.13f, 0.06f, 0.98f)); // тёплый тон для основного
             _txBlue    = MakeTex(new Color(0.18f, 0.52f, 0.88f, 1.00f));
+            _txGold    = MakeTex(new Color(0.72f, 0.55f, 0.10f, 1.00f)); // золотой для основного
             _txRed     = MakeTex(new Color(0.68f, 0.16f, 0.16f, 1.00f));
             _txGray    = MakeTex(new Color(0.28f, 0.28f, 0.28f, 1.00f));
             _txOverlay = MakeTex(new Color(0.00f, 0.00f, 0.00f, 0.80f));
@@ -295,8 +313,9 @@ namespace SaveSlotsMod
 
         private void DestroyTextures()
         {
-            Destroy(_txDark); Destroy(_txRow);  Destroy(_txBlue);
-            Destroy(_txRed);  Destroy(_txGray); Destroy(_txOverlay);
+            Destroy(_txDark);    Destroy(_txRow);   Destroy(_txRowMain);
+            Destroy(_txBlue);    Destroy(_txGold);  Destroy(_txRed);
+            Destroy(_txGray);    Destroy(_txOverlay);
         }
 
         private static Texture2D MakeTex(Color c)
@@ -325,14 +344,21 @@ namespace SaveSlotsMod
                 fontStyle = FontStyle.Bold,
                 normal    = { textColor = Color.white }
             };
+            _stSlotNameMain = new GUIStyle(GUI.skin.label)
+            {
+                fontSize  = 14,
+                fontStyle = FontStyle.Bold,
+                normal    = { textColor = new Color(1.00f, 0.85f, 0.35f) } // золотистый
+            };
             _stSlotInfo = new GUIStyle(GUI.skin.label)
             {
                 fontSize = 11,
                 normal   = { textColor = new Color(0.68f, 0.68f, 0.68f) }
             };
-            _stBtnLoad = MakeBtnStyle(_txBlue!);
-            _stBtnDel  = MakeBtnStyle(_txRed!);
-            _stBtnGray = MakeBtnStyle(_txGray!);
+            _stBtnLoad     = MakeBtnStyle(_txBlue!);
+            _stBtnLoadGold = MakeBtnStyle(_txGold!);
+            _stBtnDel      = MakeBtnStyle(_txRed!);
+            _stBtnGray     = MakeBtnStyle(_txGray!);
             _stBodyText = new GUIStyle(GUI.skin.label)
             {
                 fontSize  = 12,

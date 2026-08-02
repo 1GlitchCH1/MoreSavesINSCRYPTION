@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using BepInEx;
@@ -9,6 +10,14 @@ using UnityEngine;
 
 namespace SaveSlotsMod
 {
+    /// <summary>
+    /// Управляет слотами сохранений.
+    ///
+    /// Слот 0 (отображается как «Слот 1») — ОСНОВНОЕ СОХРАНЕНИЕ.
+    ///   Удалить нельзя. При первом запуске сюда мигрирует существующий SaveFile.gwsave.
+    ///
+    /// Слоты 1–4 (отображаются как «Слот 2–5») — независимые сохранения, изначально пустые.
+    /// </summary>
     public static class SaveSlotManager
     {
         public const int    MaxSlots     = 5;
@@ -21,38 +30,77 @@ namespace SaveSlotsMod
 
         public static int ActiveSlot { get; private set; } = 0;
 
+        /// <summary>Количество слотов с файлом сохранения.</summary>
+        public static int SlotCount => Enumerable.Range(0, MaxSlots).Count(SlotHasSave);
+
+        /// <summary>Слот 0 — основное сохранение, удалять нельзя.</summary>
+        public static bool IsMainSaveSlot(int slot) => slot == 0;
+
         // ── Init ─────────────────────────────────────────────────────────────────
         public static void Initialize()
         {
             Directory.CreateDirectory(SlotsDir);
 
-            // Read the previously active slot (if any)
-            if (File.Exists(ActiveSlotFile) &&
-                int.TryParse(File.ReadAllText(ActiveSlotFile).Trim(), out int saved))
-                ActiveSlot = Math.Min(Math.Max(saved, 0), MaxSlots - 1);
+            bool hasSlotFiles = Enumerable.Range(0, MaxSlots).Any(SlotHasSave);
+            bool hasLiveSave  = File.Exists(LiveSavePath);
 
-            // First-launch migration: if no slot files exist but a live save does,
-            // copy it into Slot 0 so the user doesn't lose their progress.
-            bool noSlotFiles = !Enumerable.Range(0, MaxSlots).Any(SlotHasSave);
-            if (noSlotFiles && File.Exists(LiveSavePath))
+            Plugin.Log.LogInfo($"[SaveSlotManager] LiveSavePath : {LiveSavePath} (exists={hasLiveSave})");
+            Plugin.Log.LogInfo($"[SaveSlotManager] SlotsDir    : {SlotsDir} (hasSlotFiles={hasSlotFiles})");
+
+            if (!hasSlotFiles)
             {
-                File.Copy(LiveSavePath, SlotSaveFile(0), overwrite: true);
-                var meta = new SlotMeta
-                {
-                    LastSaved = File.GetLastWriteTimeUtc(LiveSavePath),
-                    ModGuids  = GetCurrentModGuids()
-                };
-                SaveSlotMeta(0, meta);
+                // ── Первый запуск или сломанное состояние ──────────────────────────
+                // Файлов слотов нет — мигрируем живое сохранение в Слот 0 (основное).
                 ActiveSlot = 0;
+
+                if (hasLiveSave)
+                {
+                    File.Copy(LiveSavePath, SlotSaveFile(0), overwrite: true);
+                    SaveSlotMeta(0, new SlotMeta
+                    {
+                        LastSaved = File.GetLastWriteTimeUtc(LiveSavePath),
+                        ModGuids  = GetCurrentModGuids()
+                    });
+                    Plugin.Log.LogInfo("[SaveSlotManager] Первый запуск: перенесли живое сохранение → Слот 0 (основное).");
+                }
+                else
+                {
+                    Plugin.Log.LogInfo("[SaveSlotManager] Первый запуск: живого сохранения нет. Слот 0 будет пустым.");
+                }
+
                 File.WriteAllText(ActiveSlotFile, "0");
-                Plugin.Log.LogInfo("[SaveSlotManager] First-launch: migrated live save → Slot 0.");
+            }
+            else
+            {
+                // ── Восстанавливаем ранее активный слот ───────────────────────────
+                if (File.Exists(ActiveSlotFile) &&
+                    int.TryParse(File.ReadAllText(ActiveSlotFile).Trim(), out int saved))
+                    ActiveSlot = Math.Min(Math.Max(saved, 0), MaxSlots - 1);
+                else
+                    ActiveSlot = 0;
+
+                // Защита: если у активного слота нет файла — сбрасываемся на Слот 0
+                if (!SlotHasSave(ActiveSlot))
+                {
+                    Plugin.Log.LogWarning(
+                        $"[SaveSlotManager] Слот {ActiveSlot} не имеет файла — сброс на Слот 0.");
+                    ActiveSlot = 0;
+                    File.WriteAllText(ActiveSlotFile, "0");
+                }
+
+                // Защита: если живого сохранения нет, но файл слота есть — восстанавливаем
+                if (!hasLiveSave && SlotHasSave(ActiveSlot))
+                {
+                    File.Copy(SlotSaveFile(ActiveSlot), LiveSavePath, overwrite: true);
+                    Plugin.Log.LogInfo($"[SaveSlotManager] Восстановили Слот {ActiveSlot} → живое сохранение.");
+                }
             }
 
             Plugin.Log.LogInfo(
-                $"[SaveSlotManager] Active slot: {ActiveSlot}. Slots dir: {SlotsDir}");
+                $"[SaveSlotManager] Активный слот: {ActiveSlot}. Слотов с сохранением: {SlotCount}.");
         }
 
-        // ── Paths ─────────────────────────────────────────────────────────────────
+        // ── Пути ─────────────────────────────────────────────────────────────────
         public static string SlotSaveFile(int slot) =>
             Path.Combine(SlotsDir, $"Slot{slot}_SaveFile.gwsave");
         public static string SlotMetaFile(int slot) =>
@@ -60,7 +108,7 @@ namespace SaveSlotsMod
         public static bool   SlotHasSave(int slot) =>
             File.Exists(SlotSaveFile(slot));
 
-        // ── Serialisation ─────────────────────────────────────────────────────────
+        // ── Сериализация ─────────────────────────────────────────────────────────
         private static readonly DataContractJsonSerializerSettings _dcjSettings =
             new DataContractJsonSerializerSettings { UseSimpleDictionaryFormat = true };
 
@@ -76,7 +124,7 @@ namespace SaveSlotsMod
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogWarning($"[SaveSlotManager] Meta read failed slot {slot}: {ex.Message}");
+                Plugin.Log.LogWarning($"[SaveSlotManager] Ошибка чтения мета слота {slot}: {ex.Message}");
                 return null;
             }
         }
@@ -92,10 +140,10 @@ namespace SaveSlotsMod
         public static List<string> GetCurrentModGuids() =>
             BepInEx.Bootstrap.Chainloader.PluginInfos.Keys.OrderBy(g => g).ToList();
 
-        // ── Backup live save → active slot ────────────────────────────────────────
+        // ── Резервная копия живого сохранения → активный слот ───────────────────
         /// <summary>
-        /// Call this BEFORE showing the slot picker so the current game state is
-        /// reflected. Safe to call even if no live save exists.
+        /// Вызывать ДО показа пикера, чтобы данные активного слота были актуальны.
+        /// Безопасен, если живого сохранения нет.
         /// </summary>
         public static void BackupLiveSave()
         {
@@ -103,72 +151,115 @@ namespace SaveSlotsMod
             try
             {
                 File.Copy(LiveSavePath, SlotSaveFile(ActiveSlot), overwrite: true);
-                // Update meta timestamp (keep old mod list if file existed)
                 var existing = LoadSlotMeta(ActiveSlot);
-                var meta = new SlotMeta
+                SaveSlotMeta(ActiveSlot, new SlotMeta
                 {
                     LastSaved = DateTime.UtcNow,
                     ModGuids  = existing?.ModGuids ?? GetCurrentModGuids()
-                };
-                SaveSlotMeta(ActiveSlot, meta);
-                Plugin.Log.LogInfo($"[SaveSlotManager] Backed up live save → Slot {ActiveSlot}.");
+                });
+                Plugin.Log.LogInfo($"[SaveSlotManager] Резервная копия → Слот {ActiveSlot}.");
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogWarning($"[SaveSlotManager] Backup failed: {ex.Message}");
+                Plugin.Log.LogWarning($"[SaveSlotManager] Ошибка резервной копии: {ex.Message}");
             }
         }
 
-        // ── Switch ────────────────────────────────────────────────────────────────
+        // ── Переключение слота ────────────────────────────────────────────────────
         public static void SwitchToSlot(int targetSlot)
         {
             if (targetSlot < 0 || targetSlot >= MaxSlots)
                 throw new ArgumentOutOfRangeException(nameof(targetSlot));
 
-            // Remember whether target slot had a save BEFORE we do anything,
-            // so backup-then-copy doesn't accidentally find its own backup.
             bool targetWasEmpty = !SlotHasSave(targetSlot);
 
-            // Save current live game to the active slot (skip if same slot & was empty —
-            // we'd just be backing up nothing useful and creating a "ghost" save).
-            bool sameSlotNewGame = (targetSlot == ActiveSlot && targetWasEmpty);
-            if (File.Exists(LiveSavePath) && !sameSlotNewGame)
+            // Сохраняем текущее живое сохранение в файл активного слота
+            if (File.Exists(LiveSavePath))
             {
                 File.Copy(LiveSavePath, SlotSaveFile(ActiveSlot), overwrite: true);
-                Plugin.Log.LogInfo($"[SaveSlotManager] Backed up live → Slot {ActiveSlot}");
+                Plugin.Log.LogInfo($"[SaveSlotManager] Живое сохранение → Слот {ActiveSlot}.");
             }
 
-            // Install the chosen slot (or clear for a fresh game)
+            // Устанавливаем целевой слот как живое сохранение
             if (!targetWasEmpty)
             {
                 File.Copy(SlotSaveFile(targetSlot), LiveSavePath, overwrite: true);
-                Plugin.Log.LogInfo($"[SaveSlotManager] Slot {targetSlot} → live save");
+                Plugin.Log.LogInfo($"[SaveSlotManager] Слот {targetSlot} → живое сохранение.");
             }
             else
             {
+                // Пустой слот: удаляем живое сохранение + сбрасываем данные в памяти
                 if (File.Exists(LiveSavePath)) File.Delete(LiveSavePath);
-                Plugin.Log.LogInfo($"[SaveSlotManager] Slot {targetSlot} is empty — new game");
+                TryResetInMemorySave();
+                Plugin.Log.LogInfo($"[SaveSlotManager] Слот {targetSlot} пуст — начинаем новую игру.");
             }
 
             ActiveSlot = targetSlot;
             File.WriteAllText(ActiveSlotFile, targetSlot.ToString());
         }
 
-        // ── Game saved hook ───────────────────────────────────────────────────────
+        // ── Сброс данных сохранения в памяти (best-effort) ───────────────────────
+        private static void TryResetInMemorySave()
+        {
+            try
+            {
+                var flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+                var type  = typeof(SaveManager);
+
+                // Пробуем типичные названия поля/свойства с данными сохранения
+                string[] candidates = { "SaveData", "saveData", "_saveData", "currentSaveData", "save" };
+
+                foreach (var name in candidates)
+                {
+                    // Поле
+                    var field = type.GetField(name, flags);
+                    if (field != null && !field.FieldType.IsPrimitive && !field.FieldType.IsValueType)
+                    {
+                        try
+                        {
+                            field.SetValue(null, Activator.CreateInstance(field.FieldType));
+                            Plugin.Log.LogInfo($"[SaveSlotManager] Сброс памяти через поле '{name}'.");
+                            return;
+                        }
+                        catch { /* пробуем следующее */ }
+                    }
+
+                    // Свойство
+                    var prop = type.GetProperty(name, flags);
+                    if (prop?.CanWrite == true && !prop.PropertyType.IsPrimitive && !prop.PropertyType.IsValueType)
+                    {
+                        try
+                        {
+                            prop.SetValue(null, Activator.CreateInstance(prop.PropertyType));
+                            Plugin.Log.LogInfo($"[SaveSlotManager] Сброс памяти через свойство '{name}'.");
+                            return;
+                        }
+                        catch { /* пробуем следующее */ }
+                    }
+                }
+
+                Plugin.Log.LogWarning("[SaveSlotManager] Не удалось найти поле данных сохранения для сброса.");
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[SaveSlotManager] TryResetInMemorySave ошибка: {ex.Message}");
+            }
+        }
+
+        // ── Хук: игра сохранила файл ──────────────────────────────────────────────
         public static void OnGameSaved()
         {
             if (!File.Exists(LiveSavePath)) return;
             File.Copy(LiveSavePath, SlotSaveFile(ActiveSlot), overwrite: true);
-            var meta = new SlotMeta
+            SaveSlotMeta(ActiveSlot, new SlotMeta
             {
                 LastSaved = DateTime.UtcNow,
                 ModGuids  = GetCurrentModGuids()
-            };
-            SaveSlotMeta(ActiveSlot, meta);
-            Plugin.Log.LogInfo($"[SaveSlotManager] Slot {ActiveSlot} saved ({meta.ModGuids.Count} mods).");
+            });
+            Plugin.Log.LogInfo($"[SaveSlotManager] Слот {ActiveSlot} сохранён.");
         }
 
-        // ── Mod diff ──────────────────────────────────────────────────────────────
+        // ── Разница модов ─────────────────────────────────────────────────────────
         public static ModDiff ComputeDiff(int slot)
         {
             var current = GetCurrentModGuids();
@@ -181,12 +272,17 @@ namespace SaveSlotsMod
             };
         }
 
-        // ── Delete slot ───────────────────────────────────────────────────────────
+        // ── Удаление слота ────────────────────────────────────────────────────────
         public static void DeleteSlot(int slot)
         {
+            if (IsMainSaveSlot(slot))
+            {
+                Plugin.Log.LogWarning("[SaveSlotManager] Основное сохранение (Слот 0) удалить нельзя.");
+                return;
+            }
             if (File.Exists(SlotSaveFile(slot))) File.Delete(SlotSaveFile(slot));
             if (File.Exists(SlotMetaFile(slot)))  File.Delete(SlotMetaFile(slot));
-            Plugin.Log.LogInfo($"[SaveSlotManager] Slot {slot} deleted.");
+            Plugin.Log.LogInfo($"[SaveSlotManager] Слот {slot} удалён.");
         }
     }
 

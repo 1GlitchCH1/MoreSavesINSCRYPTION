@@ -7,8 +7,8 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!--
-      Set GameFolder to your Inscryption installation directory.
-      You can either edit it here, or pass it on the command line:
+      Укажи путь к папке с игрой Inscryption здесь,
+      или передай через командную строку:
         dotnet build -c Release /p:GameFolder="D:\FIleENG\Inscryption"
     -->
     <GameFolder Condition="'$(GameFolder)' == ''">D:\FIleENG\Inscryption</GameFolder>
@@ -53,11 +53,8 @@
       <Private>false</Private>
     </Reference>
 
-    <!-- Button.onClick (ButtonClickedEvent), EventTrigger -->
-    <Reference Include="UnityEngine.EventSystems">
-      <HintPath>$(GameFolder)\Inscryption_Data\Managed\UnityEngine.EventSystems.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
+    <!-- УБРАНО: UnityEngine.EventSystems — код использует только IMGUI (OnGUI),
+         и эта сборка вызывала предупреждение MSB3245. -->
 
     <!-- RectMask2D, ContentSizeFitter, VerticalLayoutGroup, LayoutElement -->
     <Reference Include="UnityEngine.IMGUIModule">
@@ -71,11 +68,6 @@
     </Reference>
 
     <!-- ── InscryptionAPI ───────────────────────────────────────────────── -->
-    <!--
-      Thunderstore/r2modman installs the DLL directly into BepInEx\plugins\.
-      Manual installs sometimes use BepInEx\plugins\API\ or BepInEx\plugins\InscryptionAPI\.
-      All three paths are listed; MSBuild uses whichever one exists.
-    -->
     <Reference Include="InscryptionAPI"
                Condition="Exists('$(GameFolder)\BepInEx\plugins\InscryptionAPI.dll')">
       <HintPath>$(GameFolder)\BepInEx\plugins\InscryptionAPI.dll</HintPath>
