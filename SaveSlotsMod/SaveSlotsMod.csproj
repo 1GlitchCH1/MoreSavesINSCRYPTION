@@ -34,34 +34,22 @@
       <HintPath>$(GameFolder)\Inscryption_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
-
-    <!-- Canvas, CanvasScaler, GraphicRaycaster, RenderMode, ScrollRect, etc. -->
     <Reference Include="UnityEngine.UIModule">
       <HintPath>$(GameFolder)\Inscryption_Data\Managed\UnityEngine.UIModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
-
-    <!-- UnityEngine.UI.Button, Image, Text, LayoutGroup … -->
     <Reference Include="UnityEngine.UI">
       <HintPath>$(GameFolder)\Inscryption_Data\Managed\UnityEngine.UI.dll</HintPath>
       <Private>false</Private>
     </Reference>
-
-    <!-- FontStyle, TextAnchor, Font, Text component -->
     <Reference Include="UnityEngine.TextRenderingModule">
       <HintPath>$(GameFolder)\Inscryption_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
-
-    <!-- УБРАНО: UnityEngine.EventSystems — код использует только IMGUI (OnGUI),
-         и эта сборка вызывала предупреждение MSB3245. -->
-
-    <!-- RectMask2D, ContentSizeFitter, VerticalLayoutGroup, LayoutElement -->
     <Reference Include="UnityEngine.IMGUIModule">
       <HintPath>$(GameFolder)\Inscryption_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
-
     <Reference Include="UnityEngine.InputLegacyModule">
       <HintPath>$(GameFolder)\Inscryption_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>false</Private>

@@ -144,10 +144,27 @@ namespace SaveSlotsMod
         /// <summary>
         /// Вызывать ДО показа пикера, чтобы данные активного слота были актуальны.
         /// Безопасен, если живого сохранения нет.
+        ///
+        /// ИСПРАВЛЕНИЕ (Bug 1): Если Слот 0 пустой, но живое сохранение существует —
+        /// мигрируем его в Слот 0 здесь (Initialize мог запуститься до создания файла игрой).
         /// </summary>
         public static void BackupLiveSave()
         {
-            if (!File.Exists(LiveSavePath)) return;
+            bool hasLive = File.Exists(LiveSavePath);
+
+            // ── ИСПРАВЛЕНИЕ Bug 1: Если Слот 0 пустой, но живой файл есть — мигрируем ──
+            if (!SlotHasSave(0) && hasLive)
+            {
+                Plugin.Log.LogInfo("[SaveSlotManager] BackupLiveSave: Слот 0 пустой, но живое сохранение есть — мигрируем.");
+                File.Copy(LiveSavePath, SlotSaveFile(0), overwrite: true);
+                SaveSlotMeta(0, new SlotMeta
+                {
+                    LastSaved = File.GetLastWriteTimeUtc(LiveSavePath),
+                    ModGuids  = GetCurrentModGuids()
+                });
+            }
+
+            if (!hasLive) return;
             try
             {
                 File.Copy(LiveSavePath, SlotSaveFile(ActiveSlot), overwrite: true);
@@ -188,9 +205,13 @@ namespace SaveSlotsMod
             }
             else
             {
-                // Пустой слот: удаляем живое сохранение + сбрасываем данные в памяти
-                if (File.Exists(LiveSavePath)) File.Delete(LiveSavePath);
-                TryResetInMemorySave();
+                // ── ИСПРАВЛЕНИЕ Bug 2: Пустой слот — удаляем живое сохранение ──────
+                // НЕ пытаемся сбрасывать данные в памяти рефлексией (это нарушало всё).
+                // Вместо этого просто удаляем файл; SaveManager.LoadFromFile() при
+                // отсутствии файла обязан инициализировать пустое состояние сам.
+                if (File.Exists(LiveSavePath))
+                    File.Delete(LiveSavePath);
+
                 Plugin.Log.LogInfo($"[SaveSlotManager] Слот {targetSlot} пуст — начинаем новую игру.");
             }
 
@@ -198,55 +219,7 @@ namespace SaveSlotsMod
             File.WriteAllText(ActiveSlotFile, targetSlot.ToString());
         }
 
-        // ── Сброс данных сохранения в памяти (best-effort) ───────────────────────
-        private static void TryResetInMemorySave()
-        {
-            try
-            {
-                var flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
-                var type  = typeof(SaveManager);
-
-                // Пробуем типичные названия поля/свойства с данными сохранения
-                string[] candidates = { "SaveData", "saveData", "_saveData", "currentSaveData", "save" };
-
-                foreach (var name in candidates)
-                {
-                    // Поле
-                    var field = type.GetField(name, flags);
-                    if (field != null && !field.FieldType.IsPrimitive && !field.FieldType.IsValueType)
-                    {
-                        try
-                        {
-                            field.SetValue(null, Activator.CreateInstance(field.FieldType));
-                            Plugin.Log.LogInfo($"[SaveSlotManager] Сброс памяти через поле '{name}'.");
-                            return;
-                        }
-                        catch { /* пробуем следующее */ }
-                    }
-
-                    // Свойство
-                    var prop = type.GetProperty(name, flags);
-                    if (prop?.CanWrite == true && !prop.PropertyType.IsPrimitive && !prop.PropertyType.IsValueType)
-                    {
-                        try
-                        {
-                            prop.SetValue(null, Activator.CreateInstance(prop.PropertyType));
-                            Plugin.Log.LogInfo($"[SaveSlotManager] Сброс памяти через свойство '{name}'.");
-                            return;
-                        }
-                        catch { /* пробуем следующее */ }
-                    }
-                }
-
-                Plugin.Log.LogWarning("[SaveSlotManager] Не удалось найти поле данных сохранения для сброса.");
-            }
-            catch (Exception ex)
-            {
-                Plugin.Log.LogWarning($"[SaveSlotManager] TryResetInMemorySave ошибка: {ex.Message}");
-            }
-        }
-
-        // ── Хук: игра сохранила файл ──────────────────────────────────────────────
+        // ── Вызывается после сохранения игрой ────────────────────────────────────
         public static void OnGameSaved()
         {
             if (!File.Exists(LiveSavePath)) return;
