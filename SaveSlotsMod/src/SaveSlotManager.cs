@@ -50,7 +50,6 @@ namespace SaveSlotsMod
             if (!hasSlotFiles)
             {
                 // ── Первый запуск или сломанное состояние ──────────────────────────
-                // Файлов слотов нет — мигрируем живое сохранение в Слот 0 (основное).
                 ActiveSlot = 0;
 
                 if (hasLiveSave)
@@ -96,8 +95,34 @@ namespace SaveSlotsMod
                 }
             }
 
+            // ── Подписываемся на выход из приложения ──────────────────────────────
+            Application.quitting += OnApplicationQuitting;
+
             Plugin.Log.LogInfo(
                 $"[SaveSlotManager] Активный слот: {ActiveSlot}. Слотов с сохранением: {SlotCount}.");
+        }
+
+        /// <summary>
+        /// Вызывается когда Unity закрывает приложение.
+        /// Гарантирует, что живое сохранение всегда попадёт в файл слота.
+        /// </summary>
+        private static void OnApplicationQuitting()
+        {
+            if (!File.Exists(LiveSavePath)) return;
+            try
+            {
+                File.Copy(LiveSavePath, SlotSaveFile(ActiveSlot), overwrite: true);
+                SaveSlotMeta(ActiveSlot, new SlotMeta
+                {
+                    LastSaved = DateTime.UtcNow,
+                    ModGuids  = GetCurrentModGuids()
+                });
+                Plugin.Log.LogInfo($"[SaveSlotManager] OnApplicationQuitting: Слот {ActiveSlot} сохранён.");
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[SaveSlotManager] OnApplicationQuitting error: {ex.Message}");
+            }
         }
 
         // ── Пути ─────────────────────────────────────────────────────────────────
@@ -142,29 +167,12 @@ namespace SaveSlotsMod
 
         // ── Резервная копия живого сохранения → активный слот ───────────────────
         /// <summary>
-        /// Вызывать ДО показа пикера, чтобы данные активного слота были актуальны.
+        /// Копирует живое сохранение в файл активного слота.
         /// Безопасен, если живого сохранения нет.
-        ///
-        /// ИСПРАВЛЕНИЕ (Bug 1): Если Слот 0 пустой, но живое сохранение существует —
-        /// мигрируем его в Слот 0 здесь (Initialize мог запуститься до создания файла игрой).
         /// </summary>
         public static void BackupLiveSave()
         {
-            bool hasLive = File.Exists(LiveSavePath);
-
-            // ── ИСПРАВЛЕНИЕ Bug 1: Если Слот 0 пустой, но живой файл есть — мигрируем ──
-            if (!SlotHasSave(0) && hasLive)
-            {
-                Plugin.Log.LogInfo("[SaveSlotManager] BackupLiveSave: Слот 0 пустой, но живое сохранение есть — мигрируем.");
-                File.Copy(LiveSavePath, SlotSaveFile(0), overwrite: true);
-                SaveSlotMeta(0, new SlotMeta
-                {
-                    LastSaved = File.GetLastWriteTimeUtc(LiveSavePath),
-                    ModGuids  = GetCurrentModGuids()
-                });
-            }
-
-            if (!hasLive) return;
+            if (!File.Exists(LiveSavePath)) return;
             try
             {
                 File.Copy(LiveSavePath, SlotSaveFile(ActiveSlot), overwrite: true);
@@ -174,11 +182,11 @@ namespace SaveSlotsMod
                     LastSaved = DateTime.UtcNow,
                     ModGuids  = existing?.ModGuids ?? GetCurrentModGuids()
                 });
-                Plugin.Log.LogInfo($"[SaveSlotManager] Резервная копия → Слот {ActiveSlot}.");
+                Plugin.Log.LogInfo($"[SaveSlotManager] BackupLiveSave → Слот {ActiveSlot}.");
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogWarning($"[SaveSlotManager] Ошибка резервной копии: {ex.Message}");
+                Plugin.Log.LogWarning($"[SaveSlotManager] Ошибка BackupLiveSave: {ex.Message}");
             }
         }
 
@@ -205,13 +213,9 @@ namespace SaveSlotsMod
             }
             else
             {
-                // ── ИСПРАВЛЕНИЕ Bug 2: Пустой слот — удаляем живое сохранение ──────
-                // НЕ пытаемся сбрасывать данные в памяти рефлексией (это нарушало всё).
-                // Вместо этого просто удаляем файл; SaveManager.LoadFromFile() при
-                // отсутствии файла обязан инициализировать пустое состояние сам.
+                // Пустой слот — удаляем живое сохранение; игра создаст новое
                 if (File.Exists(LiveSavePath))
                     File.Delete(LiveSavePath);
-
                 Plugin.Log.LogInfo($"[SaveSlotManager] Слот {targetSlot} пуст — начинаем новую игру.");
             }
 
@@ -223,13 +227,20 @@ namespace SaveSlotsMod
         public static void OnGameSaved()
         {
             if (!File.Exists(LiveSavePath)) return;
-            File.Copy(LiveSavePath, SlotSaveFile(ActiveSlot), overwrite: true);
-            SaveSlotMeta(ActiveSlot, new SlotMeta
+            try
             {
-                LastSaved = DateTime.UtcNow,
-                ModGuids  = GetCurrentModGuids()
-            });
-            Plugin.Log.LogInfo($"[SaveSlotManager] Слот {ActiveSlot} сохранён.");
+                File.Copy(LiveSavePath, SlotSaveFile(ActiveSlot), overwrite: true);
+                SaveSlotMeta(ActiveSlot, new SlotMeta
+                {
+                    LastSaved = DateTime.UtcNow,
+                    ModGuids  = GetCurrentModGuids()
+                });
+                Plugin.Log.LogInfo($"[SaveSlotManager] OnGameSaved → Слот {ActiveSlot} сохранён.");
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[SaveSlotManager] Ошибка OnGameSaved: {ex.Message}");
+            }
         }
 
         // ── Разница модов ─────────────────────────────────────────────────────────

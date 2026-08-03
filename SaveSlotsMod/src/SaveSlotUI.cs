@@ -7,33 +7,92 @@ using UnityEngine;
 
 namespace SaveSlotsMod
 {
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Перехват «Продолжить» / «Новая игра» в главном меню.
-    //
-    // ПРИМЕЧАНИЕ: В данной версии Inscryption метода OnNewGameCardReachedSlot
-    // НЕТ — игра вызывает только OnStartGameCardReachedSlot в обоих случаях.
-    // Поэтому перехватываем только его.
-    // ─────────────────────────────────────────────────────────────────────────────
-    [HarmonyPatch(typeof(MenuController), "OnStartGameCardReachedSlot")]
-    internal static class MenuController_OnStartGameCardReachedSlot_Patch
-    {
-        private static bool Prefix(MenuController __instance)
-        {
-            if (MenuPatches.PassingThrough) return true;
+    // ═════════════════════════════════════════════════════════════════════════════
+    // ПАТЧИ СОХРАНЕНИЯ
+    // ═════════════════════════════════════════════════════════════════════════════
 
-            SaveSlotManager.BackupLiveSave();
-
-            // Если сейв уже существует — это «Продолжить», иначе — «Новая игра»
-            bool isNewGame = !File.Exists(SaveSlotManager.LiveSavePath);
-            MenuPatches.Intercept(__instance, isNewGame: isNewGame);
-            return false;
-        }
-    }
-
+    /// <summary>
+    /// Перехват SaveManager.SaveToFile.
+    /// Каждый раз когда игра сохраняет на диск — копируем файл в активный слот.
+    /// </summary>
     [HarmonyPatch(typeof(SaveManager), "SaveToFile")]
     internal static class SaveManager_SaveToFile_Patch
     {
         private static void Postfix() => SaveSlotManager.OnGameSaved();
+    }
+
+    /// <summary>
+    /// Перехват MenuController.Start.
+    /// Срабатывает когда сцена главного меню загружается — до анимации карточки.
+    /// Это самый ранний момент после возврата из игры: живое сохранение ещё
+    /// гарантированно существует на диске.
+    /// </summary>
+    [HarmonyPatch(typeof(MenuController), "Start")]
+    internal static class MenuController_Start_Patch
+    {
+        private static void Prefix()
+        {
+            // Если пикер уже открыт — ничего не делаем
+            if (SaveSlotUIBehaviour.IsShowing) return;
+            SaveSlotManager.BackupLiveSave();
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // ПЕРЕХВАТ «ПРОДОЛЖИТЬ» / «НОВАЯ ИГРА» В ГЛАВНОМ МЕНЮ
+    //
+    // ИСПРАВЛЕНИЯ:
+    //
+    //  Bug 1 — Двойной запуск (оригинальный код):
+    //    Inscryption вызывает OnStartGameCardReachedSlot для нескольких позиций
+    //    карточной анимации. Второй вызов попадал в патч уже после того, как
+    //    PassingThrough = false, и запускал НОВУЮ игру в слоте 0 — перетирая
+    //    активный слот. Исправление: cooldown 3 сек + проверка IsShowing.
+    //
+    //  Bug 2 — Потеря сейва при возврате в меню:
+    //    Живое сохранение не попадало в файл слота, потому что BackupLiveSave
+    //    вызывался уже после того, как игра удаляла/перезаписывала SaveFile.gwsave.
+    //    Исправление: патч MenuController.Start копирует файл раньше.
+    // ═════════════════════════════════════════════════════════════════════════════
+    [HarmonyPatch(typeof(MenuController), "OnStartGameCardReachedSlot")]
+    internal static class MenuController_OnStartGameCardReachedSlot_Patch
+    {
+        // Время последнего переключения слота.
+        // -100f — начальное значение, гарантирует cooldown истёк.
+        private static float _lastSwitchTime = -100f;
+
+        internal static void NotifySwitchCompleted()
+        {
+            _lastSwitchTime = Time.realtimeSinceStartup;
+        }
+
+        private static bool Prefix(MenuController __instance)
+        {
+            // 1. Мы сами вызвали метод через рефлексию — пропускаем.
+            if (MenuPatches.PassingThrough) return true;
+
+            // 2. Cooldown 3 сек после переключения — блокируем паразитные вызовы анимации.
+            if (Time.realtimeSinceStartup - _lastSwitchTime < 3f)
+            {
+                Plugin.Log.LogInfo("[Patch] OnStartGameCardReachedSlot заблокирован (cooldown).");
+                return false;
+            }
+
+            // 3. Пикер уже открыт — игнорируем.
+            if (SaveSlotUIBehaviour.IsShowing)
+            {
+                Plugin.Log.LogInfo("[Patch] OnStartGameCardReachedSlot заблокирован (пикер открыт).");
+                return false;
+            }
+
+            // 4. Штатный перехват.
+            // MenuController.Start уже сделал BackupLiveSave, но продублируем на всякий случай.
+            SaveSlotManager.BackupLiveSave();
+
+            bool isNewGame = !File.Exists(SaveSlotManager.LiveSavePath);
+            MenuPatches.Intercept(__instance, isNewGame: isNewGame);
+            return false;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -42,12 +101,10 @@ namespace SaveSlotsMod
         public static bool PassingThrough { get; private set; }
 
         private static MenuController? _menu;
-        private static bool            _menuWasNewGame;
 
         public static void Intercept(MenuController menu, bool isNewGame)
         {
-            _menu           = menu;
-            _menuWasNewGame = isNewGame;
+            _menu = menu;
             SaveSlotUIBehaviour.Show();
         }
 
@@ -72,19 +129,18 @@ namespace SaveSlotsMod
             PassingThrough = true;
             try
             {
-                // ── ИСПРАВЛЕНИЕ Bug 2 ─────────────────────────────────────────────
-                // CreateNewSaveFile — нативный метод игры, создаёт чистый SaveFile.gwsave.
-                // После этого LoadFromFile грузит его в память, и OnStartGameCardReachedSlot
-                // запускает игру с чистым состоянием.
                 var createMethod = AccessTools.Method(typeof(SaveManager), "CreateNewSaveFile");
                 if (createMethod != null)
                 {
                     Plugin.Log.LogInfo("[MenuPatches] Новая игра через SaveManager.CreateNewSaveFile()");
                     createMethod.Invoke(null, null);
+                    // Сразу после создания файла — копируем в слот.
+                    // Это создаёт SlotX_SaveFile.gwsave немедленно, до первого автосохранения игры.
+                    SaveSlotManager.OnGameSaved();
                 }
                 else
                 {
-                    Plugin.Log.LogWarning("[MenuPatches] CreateNewSaveFile не найден! Логируем методы SaveManager:");
+                    Plugin.Log.LogWarning("[MenuPatches] CreateNewSaveFile не найден! Методы SaveManager:");
                     foreach (var m in typeof(SaveManager).GetMethods(
                         System.Reflection.BindingFlags.Public |
                         System.Reflection.BindingFlags.NonPublic |
@@ -101,12 +157,15 @@ namespace SaveSlotsMod
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // IMGUI пикер слотов.
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═════════════════════════════════════════════════════════════════════════════
+    // IMGUI ПИКЕР СЛОТОВ
+    // ═════════════════════════════════════════════════════════════════════════════
     public class SaveSlotUIBehaviour : MonoBehaviour
     {
         private static SaveSlotUIBehaviour? _instance;
+
+        /// <summary>True пока пикер открыт (объект ещё не уничтожен).</summary>
+        public static bool IsShowing => _instance != null;
 
         private bool   _showWarning;
         private int    _pendingSlot    = -1;
@@ -165,7 +224,6 @@ namespace SaveSlotsMod
             float cancelX = px + (PW - cancelW) / 2f;
             float cancelY = ry + 14;
 
-            // ИСПРАВЛЕНИЕ Bug 3: просто закрываем UI, не запускаем игру.
             if (GUI.Button(new Rect(cancelX, cancelY, cancelW, cancelH), "← Назад в меню", _stBtnGray!))
                 OnCancel();
         }
@@ -287,12 +345,16 @@ namespace SaveSlotsMod
 
         private void DoSwitch(int slot, bool isEmpty)
         {
-            try   { SaveSlotManager.SwitchToSlot(slot); }
+            try { SaveSlotManager.SwitchToSlot(slot); }
             catch (Exception ex)
             {
                 Plugin.Log.LogError($"[SlotUI] SwitchToSlot({slot}) failed: {ex}");
                 return;
             }
+
+            // Запускаем cooldown ПЕРЕД уничтожением пикера — блокируем паразитные
+            // вызовы OnStartGameCardReachedSlot от анимации меню.
+            MenuController_OnStartGameCardReachedSlot_Patch.NotifySwitchCompleted();
 
             Destroy(gameObject);
 
@@ -302,7 +364,6 @@ namespace SaveSlotsMod
                 MenuPatches.ProceedWithLoad();
         }
 
-        // ИСПРАВЛЕНИЕ Bug 3: просто закрываем UI, не запускаем игру.
         private void OnCancel()
         {
             Destroy(gameObject);
