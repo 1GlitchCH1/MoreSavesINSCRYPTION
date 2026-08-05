@@ -12,14 +12,17 @@ namespace SaveSlotsMod
     {
         public const string PluginGuid    = "com.saveslotsmod.inscryption";
         public const string PluginName    = "Save Slots Mod";
-        public const string PluginVersion = "1.0.1";
+        public const string PluginVersion = "1.0.3";
 
         internal static ManualLogSource Log = null!;
 
-        // Периодический бэкап: раз в 60 секунд копируем живое сохранение в слот-файл.
-        // Страховка на случай, если патч SaveToFile не сработал.
-        private float _backupTimer = 0f;
-        private const float BACKUP_INTERVAL = 60f;
+        // Страховка на случай, если Harmony-патчи не вызываются (например, из-за MonoMod/APIPatcher):
+        // часто проверяем, изменился ли файл сейва на диске, и сразу сохраняем в активный слот.
+        //
+        // Важно: интервал маленький. Иначе игрок может успеть выйти в меню,
+        // а живой сейв уже будет удалён/перезаписан.
+        private float _pollTimer = 0f;
+        private const float POLL_INTERVAL = 0.25f;
 
         private void Awake()
         {
@@ -36,18 +39,14 @@ namespace SaveSlotsMod
 
         private void Update()
         {
-            // Не делаем бэкап пока открыт пикер слотов
+            // Не трогаем файлы, пока открыт пикер слотов (там идёт SwitchToSlot)
             if (SaveSlotUIBehaviour.IsShowing) return;
-            // Не делаем бэкап в главном меню (нет активной игры)
-            if (!File.Exists(SaveSlotManager.LiveSavePath)) return;
 
-            _backupTimer += Time.deltaTime;
-            if (_backupTimer >= BACKUP_INTERVAL)
-            {
-                _backupTimer = 0f;
-                SaveSlotManager.OnGameSaved();
-                Log.LogInfo($"[Plugin] Периодический бэкап → Слот {SaveSlotManager.ActiveSlot}.");
-            }
+            _pollTimer += Time.deltaTime;
+            if (_pollTimer < POLL_INTERVAL) return;
+            _pollTimer = 0f;
+
+            SaveSlotManager.PollLiveSaveChanges();
         }
     }
 }
