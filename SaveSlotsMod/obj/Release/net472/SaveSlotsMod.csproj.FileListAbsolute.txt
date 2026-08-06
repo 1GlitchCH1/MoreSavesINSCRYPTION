@@ -1,0 +1,9 @@
+D:\Download-2\project-bolt-sb1-z3eytbkr\project\SaveSlotsMod\bin\Release\net472\SaveSlotsMod.dll
+D:\Download-2\project-bolt-sb1-z3eytbkr\project\SaveSlotsMod\bin\Release\net472\SaveSlotsMod.pdb
+D:\Download-2\project-bolt-sb1-z3eytbkr\project\SaveSlotsMod\obj\Release\net472\SaveSlotsMod.csproj.AssemblyReference.cache
+D:\Download-2\project-bolt-sb1-z3eytbkr\project\SaveSlotsMod\obj\Release\net472\SaveSlotsMod.GeneratedMSBuildEditorConfig.editorconfig
+D:\Download-2\project-bolt-sb1-z3eytbkr\project\SaveSlotsMod\obj\Release\net472\SaveSlotsMod.AssemblyInfoInputs.cache
+D:\Download-2\project-bolt-sb1-z3eytbkr\project\SaveSlotsMod\obj\Release\net472\SaveSlotsMod.AssemblyInfo.cs
+D:\Download-2\project-bolt-sb1-z3eytbkr\project\SaveSlotsMod\obj\Release\net472\SaveSlotsMod.csproj.CoreCompileInputs.cache
+D:\Download-2\project-bolt-sb1-z3eytbkr\project\SaveSlotsMod\obj\Release\net472\SaveSlotsMod.dll
+D:\Download-2\project-bolt-sb1-z3eytbkr\project\SaveSlotsMod\obj\Release\net472\SaveSlotsMod.pdb

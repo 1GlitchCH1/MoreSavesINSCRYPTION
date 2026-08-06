@@ -5,6 +5,7 @@ using System.Text;
 using HarmonyLib;
 using DiskCardGame;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace SaveSlotsMod
 {
@@ -256,14 +257,23 @@ namespace SaveSlotsMod
 
         private void OnGUI()
         {
-            EnsureStyles();
-            GUI.color = Color.white;
-            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), _txOverlay!);
-            if (_showDeleteConfirm)   DrawDeleteConfirm();
-            else if (_showWarning)    DrawWarning();
-            else                     DrawPicker();
+            int previousDepth = GUI.depth;
+            GUI.depth = -100000;
+            try
+            {
+                EnsureStyles();
+                GUI.color = Color.white;
+                GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), _txOverlay!);
+                if (_showDeleteConfirm)   DrawDeleteConfirm();
+                else if (_showWarning)    DrawWarning();
+                else                     DrawPicker();
 
-            DrawCustomCursor();
+                DrawCustomCursor();
+            }
+            finally
+            {
+                GUI.depth = previousDepth;
+            }
         }
 
         // ── Пикер слотов ──────────────────────────────────────────────────────────
@@ -430,6 +440,7 @@ namespace SaveSlotsMod
         private void OnCancel()
         {
             Destroy(gameObject);
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
 
         private void OnDeleteSlot(int slot)
