@@ -228,6 +228,9 @@ namespace SaveSlotsMod
         private int    _deleteSlot      = -1;
         private string _deleteSlotLabel = "";
 
+        private const int SlotsPerPage = 5;
+        private int _currentPage;
+
         private Texture2D? _txDark, _txRow, _txRowMain, _txBlue, _txGold, _txRed, _txGray, _txOverlay;
 
         // ── Курсор ───────────────────────────────────────────────────────────────
@@ -285,26 +288,67 @@ namespace SaveSlotsMod
         {
             const float PW    = 580f;
             const float ROW_H = 78f, ROW_GAP = 8f;
-            float rowsTotal = SaveSlotManager.MaxSlots * (ROW_H + ROW_GAP) - ROW_GAP;
+
+            int totalPages = Mathf.CeilToInt((float)SaveSlotManager.MaxSlots / SlotsPerPage);
+            if (_currentPage < 0) _currentPage = 0;
+            if (_currentPage >= totalPages) _currentPage = totalPages - 1;
+
+            int slotsOnPage = Mathf.Min(SlotsPerPage, SaveSlotManager.MaxSlots - _currentPage * SlotsPerPage);
+
+            float rowsTotal = slotsOnPage * (ROW_H + ROW_GAP) - ROW_GAP;
             float ph = 16 + 34 + 12 + rowsTotal + 14 + 44 + 14;
             float px = (Screen.width  - PW) / 2f;
             float py = (Screen.height - ph) / 2f;
 
             GUI.DrawTexture(new Rect(px, py, PW, ph), _txDark!);
-            GUI.Label(new Rect(px, py + 14, PW, 34), "— Выбери файл сохранения —", _stTitle!);
+
+            string pageLabel = totalPages > 1
+                ? $"— Выбери файл сохранения  (стр. {_currentPage + 1}/{totalPages}) —"
+                : "— Выбери файл сохранения —";
+            GUI.Label(new Rect(px, py + 14, PW, 34), pageLabel, _stTitle!);
 
             float ry = py + 14 + 34 + 12;
-            for (int i = 0; i < SaveSlotManager.MaxSlots; i++)
+            int startSlot = _currentPage * SlotsPerPage;
+            for (int i = 0; i < slotsOnPage; i++)
             {
-                DrawSlotRow(i, px + 12, ry, PW - 24, ROW_H);
+                DrawSlotRow(startSlot + i, px + 12, ry, PW - 24, ROW_H);
                 ry += ROW_H + ROW_GAP;
             }
 
-            float cancelW = 200f, cancelH = 40f;
-            float cancelX = px + (PW - cancelW) / 2f;
-            float cancelY = ry + 14;
+            // ── Нижняя панель: стрелки + Назад ──────────────────────────────────
+            float btnH = 40f;
+            float cancelW = 200f;
+            float arrowW = 48f;
+            float spacing = 12f;
 
-            if (GUI.Button(new Rect(cancelX, cancelY, cancelW, cancelH), "← Назад в меню", _stBtnGray!))
+            float bottomY = ry + 14;
+            float totalBottomW = cancelW;
+            if (totalPages > 1) totalBottomW += (arrowW * 2) + (spacing * 2);
+            float bottomStartX = px + (PW - totalBottomW) / 2f;
+
+            float cursorX = bottomStartX;
+
+            if (totalPages > 1)
+            {
+                // Стрелка влево
+                if (GUI.Button(new Rect(cursorX, bottomY, arrowW, btnH), "◀", _stBtnGray!))
+                {
+                    _currentPage--;
+                    if (_currentPage < 0) _currentPage = totalPages - 1;
+                }
+                cursorX += arrowW + spacing;
+
+                // Стрелка вправо
+                if (GUI.Button(new Rect(cursorX, bottomY, arrowW, btnH), "▶", _stBtnGray!))
+                {
+                    _currentPage++;
+                    if (_currentPage >= totalPages) _currentPage = 0;
+                }
+                cursorX += arrowW + spacing;
+            }
+
+            // Кнопка "Назад в меню"
+            if (GUI.Button(new Rect(cursorX, bottomY, cancelW, btnH), "← Назад в меню", _stBtnGray!))
                 OnCancel();
 
             // ── Статус импорта ───────────────────────────────────────────────────
@@ -345,7 +389,7 @@ namespace SaveSlotsMod
             // ── Доп. информация: акт и время ────────────────────────────────────
             if (hasSave && meta != null)
             {
-                string actLabel = meta.Act > 0 ? $"Акт {meta.Act}" : "Акт ?";
+                string actLabel = SaveSlotManager.GetActLabel(meta.Act);
                 string timeLabel = SaveSlotManager.FormatPlayTime(meta.PlayTime);
                 string progress = $"{actLabel}   •   Время: {timeLabel}";
                 GUI.Label(new Rect(textX, ry + 54, 320, 20), progress, _stSlotInfo!);

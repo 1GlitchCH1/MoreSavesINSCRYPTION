@@ -23,7 +23,7 @@ namespace SaveSlotsMod
     /// </summary>
     public static class SaveSlotManager
     {
-        public const int    MaxSlots     = 5;
+        public const int    MaxSlots     = 10;
         public const string SaveFileName = "SaveFile.gwsave";
 
         // ── Папки ────────────────────────────────────────────────────────────────
@@ -146,7 +146,8 @@ namespace SaveSlotsMod
                     SaveSlotMeta(0, new SlotMeta
                     {
                         LastSaved = File.GetLastWriteTimeUtc(LiveSavePath),
-                        ModGuids  = GetCurrentModGuids()
+                        ModGuids  = GetCurrentModGuids(),
+                        Act       = ParseSaveAct(SlotSaveFile(0))
                     });
                     Plugin.Log.LogInfo("[SaveSlotManager] Первый запуск: перенесли живое сохранение → Слот 0 (основное).");
                 }
@@ -323,18 +324,18 @@ namespace SaveSlotsMod
 
         // ── Чтение прогресса из файла сейва ───────────────────────────────────────
         /// <summary>
-        /// Читает .gwsave (JSON) и определяет текущий акт (1, 2, 3).
-        /// Возвращает 0 если не удалось определить.
+        /// Читает .gwsave (JSON) и определяет текущий акт.
+        /// Возвращает: 0=обучение, 1=Акт 1, 2=Акт 2, 3=Акт 3, 4=Акт ? (финал), -1=неизвестно.
         ///
         /// StoryState enum (DiskCardGame):
-        ///   Part1       = 0   — Акт 1 (хижина Лешего)
+        ///   Part1       = 0   — Акт 0 (обучение) или Акт 1 (полноценный первый акт)
         ///   Part1_Boss  = 1   — Босс Акта 1
-        ///   Part2       = 2   — Акт 2 (надземный мир / GBC)
+        ///   Part2       = 2   — Акт 2 (2D мир / GBC)
         ///   Part2_Boss  = 3   — Босс Акта 2
         ///   Part3       = 4   — Акт 3 (фабрика P03)
         ///   Part3_Boss  = 5   — Босс Акта 3
-        ///   Finale      = 6   — Финал (Гримора)
-        ///   Ascension   = 7   — Кейси-мод
+        ///   Finale      = 6   — Акт ? (мир удаляется)
+        ///   Ascension   = 7   — Кейси-мод (не основной сюжет)
         /// </summary>
         // ── Чтение .gwsave с распаковкой GZip ─────────────────────────────────────
         /// <summary>
@@ -360,7 +361,7 @@ namespace SaveSlotsMod
         {
             try
             {
-                if (!File.Exists(saveFilePath)) return 0;
+                if (!File.Exists(saveFilePath)) return -1;
                 string json = ReadSaveFileText(saveFilePath);
 
                 // 1) Пытаемся найти storyState — целочисленное поле состояния сюжета.
@@ -373,11 +374,12 @@ namespace SaveSlotsMod
                 if (storyMatch.Success && int.TryParse(storyMatch.Groups[1].Value, out int story))
                 {
                     Plugin.Log.LogInfo($"[SaveSlotManager] ParseSaveAct: storyState={story}");
-                    if (story <= 1) return 1;  // Part1 / Part1_Boss
-                    if (story <= 3) return 2;  // Part2 / Part2_Boss
-                    if (story <= 5) return 3;  // Part3 / Part3_Boss
-                    if (story == 6) return 3;  // Finale — показываем как Акт 3
-                    if (story >= 7) return 0; // Ascension / Kaycee's Mod — не основной сюжет
+                    if (story == 0) return DetectPart1Progression(json);  // Part1 — обучение или полный акт
+                    if (story == 1) return 1;                              // Part1_Boss
+                    if (story <= 3) return 2;                              // Part2 / Part2_Boss
+                    if (story <= 5) return 3;                              // Part3 / Part3_Boss
+                    if (story == 6) return 4;                              // Finale — Акт ? (мир удаляется)
+                    if (story >= 7) return -1;                             // Ascension — не основной сюжет
                 }
 
                 // 2) Запасной вариант: ищем currentScene — имя сцены содержит Part1/Part2/Part3
@@ -386,9 +388,10 @@ namespace SaveSlotsMod
                 {
                     string scene = sceneMatch.Groups[1].Value;
                     Plugin.Log.LogInfo($"[SaveSlotManager] ParseSaveAct: currentScene='{scene}'");
-                    if (scene.Contains("Part1")) return 1;
-                    if (scene.Contains("Part2") || scene.Contains("GBC")) return 2;
                     if (scene.Contains("Part3")) return 3;
+                    if (scene.Contains("Part2") || scene.Contains("GBC")) return 2;
+                    if (scene.Contains("Part1")) return DetectPart1Progression(json);
+                    if (scene.Contains("Finale") || scene.Contains("End")) return 4;
                 }
 
                 // 3) Запасной вариант по секциям данных:
@@ -405,7 +408,51 @@ namespace SaveSlotsMod
             {
                 Plugin.Log.LogWarning($"[SaveSlotManager] ParseSaveAct error: {ex.Message}");
             }
-            return 0;
+            return -1;
+        }
+
+        // ── Определение прогрессии в Part1 (обучение vs. полный акт) ──────────────
+        /// <summary>
+        /// Внутри Part1 (storyState=0) пытается отличить обучение (Акт 0) от
+        /// полноценного первого акта (Акт 1).
+        ///
+        /// Акт 0 — обучение: игрок только начал, ресурсов почти нет.
+        /// Акт 1 — полноценный первый акт: игрок может взять глаз и получить плёнку.
+        /// </summary>
+        private static int DetectPart1Progression(string json)
+        {
+            // 1) part1Data с currency > 0 — игрок заработал кости, обучение пройдено.
+            if (Regex.IsMatch(json, @"""part1Data""\s*:\s*\{[^}]*""currency""\s*:\s*[1-9]"))
+                return 1;
+
+            // 2) Запасной вариант: playTime. Обучение длится ~1–2 минуты.
+            var playTimeMatch = Regex.Match(json, @"""playTime""\s*:\s*([0-9]+(?:\.[0-9]+)?)");
+            if (playTimeMatch.Success && float.TryParse(playTimeMatch.Groups[1].Value,
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out float pt))
+            {
+                if (pt < 120f) return 0;
+                return 1;
+            }
+
+            // 3) Не удалось определить — по умолчанию полноценный акт.
+            return 1;
+        }
+
+        /// <summary>
+        /// Возвращает текстовую метку акта для отображения в меню.
+        /// </summary>
+        public static string GetActLabel(int act)
+        {
+            switch (act)
+            {
+                case 0: return "Акт 0";
+                case 1: return "Акт 1";
+                case 2: return "Акт 2";
+                case 3: return "Акт 3";
+                case 4: return "Акт ?";
+                default: return "Акт ?";
+            }
         }
 
         // ── Чтение времени игры из файла сейва ─────────────────────────────────────
@@ -695,7 +742,7 @@ namespace SaveSlotsMod
     {
         [DataMember] public DateTime     LastSaved { get; set; }
         [DataMember] public List<string> ModGuids  { get; set; } = new List<string>();
-        [DataMember] public int          Act       { get; set; } = 0;
+        [DataMember] public int          Act       { get; set; } = -1;
         [DataMember] public float        PlayTime  { get; set; } = 0f;
     }
 
