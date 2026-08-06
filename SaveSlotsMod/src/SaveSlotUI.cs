@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using HarmonyLib;
 using DiskCardGame;
@@ -129,13 +130,17 @@ namespace SaveSlotsMod
             PassingThrough = true;
             try
             {
+                // Ищем метод создания нового сейва — может быть статическим
+                // или экземплярным (SaveManager — обычный класс, не MonoBehaviour).
                 var createMethod = AccessTools.Method(typeof(SaveManager), "CreateNewSaveFile");
                 if (createMethod != null)
                 {
                     Plugin.Log.LogInfo("[MenuPatches] Новая игра через SaveManager.CreateNewSaveFile()");
-                    createMethod.Invoke(null, null);
+                    object? target = null;
+                    if (!createMethod.IsStatic)
+                        target = FindSaveManagerInstance();
+                    createMethod.Invoke(target, null);
                     // Сразу после создания файла — копируем в слот.
-                    // Это создаёт SlotX_SaveFile.gwsave немедленно, до первого автосохранения игры.
                     SaveSlotManager.OnGameSaved();
                 }
                 else
@@ -155,6 +160,51 @@ namespace SaveSlotsMod
             }
             finally { PassingThrough = false; }
         }
+
+        /// <summary>
+        /// Ищет экземпляр SaveManager через рефлексию статических полей/свойств
+        /// (SaveManager — обычный класс, не MonoBehaviour, поэтому FindObjectOfType не подходит).
+        /// </summary>
+        private static object? FindSaveManagerInstance()
+        {
+            const BindingFlags flags =
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+
+            // Поля
+            foreach (var f in typeof(SaveManager).GetFields(flags))
+            {
+                if (typeof(SaveManager).IsAssignableFrom(f.FieldType))
+                {
+                    var val = f.GetValue(null);
+                    if (val != null)
+                    {
+                        Plugin.Log.LogInfo($"[MenuPatches] SaveManager instance found via field {f.Name}");
+                        return val;
+                    }
+                }
+            }
+
+            // Свойства
+            foreach (var p in typeof(SaveManager).GetProperties(flags))
+            {
+                if (typeof(SaveManager).IsAssignableFrom(p.PropertyType) && p.GetMethod != null)
+                {
+                    try
+                    {
+                        var val = p.GetValue(null, null);
+                        if (val != null)
+                        {
+                            Plugin.Log.LogInfo($"[MenuPatches] SaveManager instance found via property {p.Name}");
+                            return val;
+                        }
+                    }
+                    catch { /* ignore getter errors */ }
+                }
+            }
+
+            Plugin.Log.LogWarning("[MenuPatches] Не удалось найти экземпляр SaveManager.");
+            return null;
+        }
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -172,7 +222,18 @@ namespace SaveSlotsMod
         private bool   _pendingIsEmpty;
         private string _warningText    = "";
 
+        // ── Диалог удаления ──────────────────────────────────────────────────────
+        private bool   _showDeleteConfirm;
+        private int    _deleteSlot      = -1;
+        private string _deleteSlotLabel = "";
+
         private Texture2D? _txDark, _txRow, _txRowMain, _txBlue, _txGold, _txRed, _txGray, _txOverlay;
+
+        // ── Курсор ───────────────────────────────────────────────────────────────
+        private Texture2D? _cursorTex;
+        private bool       _cursorHidden;
+        private const float CURSOR_W = 28f;
+        private const float CURSOR_H = 28f;
 
         private GUIStyle? _stTitle, _stSlotName, _stSlotNameMain, _stSlotInfo;
         private GUIStyle? _stBtnLoad, _stBtnLoadGold, _stBtnDel, _stBtnGray;
@@ -189,15 +250,20 @@ namespace SaveSlotsMod
         }
 
         private void Awake()     => CreateTextures();
-        private void OnDestroy() { _instance = null; DestroyTextures(); }
+        private void OnEnable()  { HideHardwareCursor(); }
+        private void OnDisable() { RestoreHardwareCursor(); }
+        private void OnDestroy() { _instance = null; RestoreHardwareCursor(); DestroyTextures(); }
 
         private void OnGUI()
         {
             EnsureStyles();
             GUI.color = Color.white;
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), _txOverlay!);
-            if (_showWarning) DrawWarning();
-            else              DrawPicker();
+            if (_showDeleteConfirm)   DrawDeleteConfirm();
+            else if (_showWarning)    DrawWarning();
+            else                     DrawPicker();
+
+            DrawCustomCursor();
         }
 
         // ── Пикер слотов ──────────────────────────────────────────────────────────
@@ -257,14 +323,11 @@ namespace SaveSlotsMod
 
             if (hasSave)
             {
-                if (!isMainSave)
-                {
-                    float dW = 32f, dH = 36f;
-                    float dX = btnRight - dW, dY = ry + (rh - dH) / 2f;
-                    if (GUI.Button(new Rect(dX, dY, dW, dH), "✕", _stBtnDel!))
-                        OnDeleteSlot(cap);
-                    btnRight -= dW + 6;
-                }
+                float dW = 32f, dH = 36f;
+                float dX = btnRight - dW, dY = ry + (rh - dH) / 2f;
+                if (GUI.Button(new Rect(dX, dY, dW, dH), "✕", _stBtnDel!))
+                    OnDeleteSlot(cap);
+                btnRight -= dW + 6;
 
                 float lW = 106f, lH = 36f;
                 float lX = btnRight - lW, lY = ry + (rh - lH) / 2f;
@@ -371,8 +434,44 @@ namespace SaveSlotsMod
 
         private void OnDeleteSlot(int slot)
         {
-            if (SaveSlotManager.IsMainSaveSlot(slot)) return;
-            SaveSlotManager.DeleteSlot(slot);
+            _deleteSlot      = slot;
+            _deleteSlotLabel = SaveSlotManager.IsMainSaveSlot(slot)
+                ? "Слот 1 (Основное сохранение)"
+                : $"Слот {slot + 1}";
+            _showDeleteConfirm = true;
+        }
+
+        // ── Диалог подтверждения удаления ─────────────────────────────────────────
+        private void DrawDeleteConfirm()
+        {
+            const float WW = 460f, WH = 220f;
+            float wx = (Screen.width  - WW) / 2f;
+            float wy = (Screen.height - WH) / 2f;
+
+            GUI.DrawTexture(new Rect(wx, wy, WW, WH), _txDark!);
+            GUI.Label(new Rect(wx, wy + 18, WW, 32), "⚠  Удалить сохранение?", _stWarnTitle!);
+
+            string msg = $"Вы собираетесь удалить «{_deleteSlotLabel}».\nЭто действие нельзя отменить.\nВсе данные слота будут стёрты.";
+            GUI.Label(new Rect(wx + 20, wy + 64, WW - 40, 70), msg, _stBodyText!);
+
+            float btnY    = wy + WH - 54;
+            float btnW    = 150f, btnH = 38f;
+            float spacing = 16f;
+            float totalW  = btnW * 2 + spacing;
+            float startX  = wx + (WW - totalW) / 2f;
+
+            if (GUI.Button(new Rect(startX, btnY, btnW, btnH), "Удалить", _stBtnDel!))
+            {
+                SaveSlotManager.DeleteSlot(_deleteSlot);
+                _showDeleteConfirm = false;
+                _deleteSlot        = -1;
+            }
+
+            if (GUI.Button(new Rect(startX + btnW + spacing, btnY, btnW, btnH), "Отмена", _stBtnGray!))
+            {
+                _showDeleteConfirm = false;
+                _deleteSlot        = -1;
+            }
         }
 
         private static string BuildDiffText(ModDiff diff)
@@ -405,12 +504,64 @@ namespace SaveSlotsMod
             _txRed     = MakeTex(new Color(0.65f, 0.12f, 0.12f, 1.00f));
             _txGray    = MakeTex(new Color(0.30f, 0.30f, 0.30f, 1.00f));
             _txOverlay = MakeTex(new Color(0.00f, 0.00f, 0.00f, 0.60f));
+
+            LoadCursorTexture();
         }
 
         private void DestroyTextures()
         {
             foreach (var tx in new[] { _txDark, _txRow, _txRowMain, _txBlue, _txGold, _txRed, _txGray, _txOverlay })
                 if (tx != null) Destroy(tx);
+            if (_cursorTex != null) { Destroy(_cursorTex); _cursorTex = null; }
+        }
+
+        // ── Курсор ───────────────────────────────────────────────────────────────
+        private void LoadCursorTexture()
+        {
+            try
+            {
+                var asm = System.Reflection.Assembly.GetExecutingAssembly();
+                using (var stream = asm.GetManifestResourceStream("SaveSlotsMod.cursor.png"))
+                {
+                    if (stream == null)
+                    {
+                        Plugin.Log.LogWarning("[SlotUI] Ресурс курсора не найден.");
+                        return;
+                    }
+                    var data = new byte[stream.Length];
+                    stream.Read(data, 0, data.Length);
+                    _cursorTex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                    ImageConversion.LoadImage(_cursorTex, data);
+                    _cursorTex.filterMode = FilterMode.Bilinear;
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[SlotUI] Не удалось загрузить курсор: {ex.Message}");
+            }
+        }
+
+        private void HideHardwareCursor()
+        {
+            if (_cursorHidden) return;
+            _cursorHidden    = true;
+            Cursor.visible  = false;
+        }
+
+        private void RestoreHardwareCursor()
+        {
+            if (!_cursorHidden) return;
+            _cursorHidden   = false;
+            Cursor.visible  = true;
+        }
+
+        private void DrawCustomCursor()
+        {
+            if (_cursorTex == null) return;
+            Vector2 mp = Input.mousePosition;
+            float x = mp.x - CURSOR_W * 0.3f;
+            float y = Screen.height - mp.y - CURSOR_H * 0.7f;
+            GUI.DrawTexture(new Rect(x, y, CURSOR_W, CURSOR_H), _cursorTex);
         }
 
         private static Texture2D MakeTex(Color c)
