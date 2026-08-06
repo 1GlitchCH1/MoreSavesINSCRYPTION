@@ -26,6 +26,11 @@ namespace SaveSlotsMod
         public const int    MaxSlots     = 10;
         public const string SaveFileName = "SaveFile.gwsave";
 
+        // StoryEvent.TutorialRun3Completed = 38 (DiskCardGame.StoryEvent).
+        // Третий обучающий забег завершён — Леший говорит, что больше не будет
+        // тренировать игрока. Это граница между Актом 0 (обучение) и Актом 1.
+        private const int StoryEvent_TutorialRun3Completed = 38;
+
         // ── Папки ────────────────────────────────────────────────────────────────
         // Живой сейв Inscryption (Steam) лежит в КОРНЕ папки установки игры,
         // т.е. на уровень выше Application.dataPath (которая = "<игра>/Inscryption_Data").
@@ -413,30 +418,124 @@ namespace SaveSlotsMod
 
         // ── Определение прогрессии в Part1 (обучение vs. полный акт) ──────────────
         /// <summary>
-        /// Внутри Part1 (storyState=0) пытается отличить обучение (Акт 0) от
-        /// полноценного первого акта (Акт 1).
+        /// Внутри Part1 (storyState=0) отличает обучение (Акт 0) от полноценного
+        /// первого акта (Акт 1).
         ///
-        /// Акт 0 — обучение: игрок только начал, ресурсов почти нет.
-        /// Акт 1 — полноценный первый акт: игрок может взять глаз и получить плёнку.
+        /// Акт 0 — обучение: Леший тренирует игрока (обучающие забеги 1–3).
+        /// Акт 1 — полноценный первый акт: Леший сказал, что больше не будет
+        ///   тренировать; игрок играет полноценный забег.
+        ///
+        /// Граница — сюжетное событие TutorialRun3Completed (StoryEvent = 38),
+        /// которое записывается в storyEvents.completedEvents сейва.
         /// </summary>
         private static int DetectPart1Progression(string json)
         {
-            // 1) part1Data с currency > 0 — игрок заработал кости, обучение пройдено.
-            if (Regex.IsMatch(json, @"""part1Data""\s*:\s*\{[^}]*""currency""\s*:\s*[1-9]"))
-                return 1;
+            // Логируем первые 2000 символов JSON для диагностики
+            Plugin.Log.LogInfo($"[SaveSlotManager] DetectPart1Progression: JSON (первые 2000): {json.Substring(0, Math.Min(2000, json.Length))}");
 
-            // 2) Запасной вариант: playTime. Обучение длится ~1–2 минуты.
-            var playTimeMatch = Regex.Match(json, @"""playTime""\s*:\s*([0-9]+(?:\.[0-9]+)?)");
-            if (playTimeMatch.Success && float.TryParse(playTimeMatch.Groups[1].Value,
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out float pt))
+            // 1) Проверяем completedEvents в сейве.
+            //    TutorialRun3Completed (38) = обучение завершено → Акт 1.
+            var events = ParseCompletedEvents(json);
+            if (events != null)
             {
-                if (pt < 120f) return 0;
+                Plugin.Log.LogInfo($"[SaveSlotManager] DetectPart1Progression: completedEvents found, count={events.Count}, values=[{string.Join(", ", events)}]");
+                if (events.Contains(StoryEvent_TutorialRun3Completed))
+                {
+                    Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: event 38 found → Акт 1");
+                    return 1;
+                }
+                // Если есть события с номером > 38 — точно не обучение
+                if (events.Exists(e => e > StoryEvent_TutorialRun3Completed))
+                {
+                    Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: events > 38 found → Акт 1");
+                    return 1;
+                }
+                // Если есть вообще любые события — скорее всего Act 1 через chapter select
+                if (events.Count > 0)
+                {
+                    Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: events exist but 38 missing → Акт 1 (chapter select)");
+                    return 1;
+                }
+                Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: completedEvents empty, trying fallbacks...");
+            }
+            else
+            {
+                Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: completedEvents not found in JSON, trying fallbacks...");
+            }
+
+            // 2) part1Data с currency > 0 — игрок заработал кости.
+            if (Regex.IsMatch(json, @"""part1Data""\s*:\s*\{[^}]*""currency""\s*:\s*[1-9]"))
+            {
+                Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: part1Data.currency > 0 → Акт 1");
                 return 1;
             }
 
-            // 3) Не удалось определить — по умолчанию полноценный акт.
+            // 3) currentLoop — обучение это циклы 1–3, Акт 1 начинается с цикла 4.
+            var loopMatch = Regex.Match(json, @"""currentLoop""\s*:\s*(\d+)");
+            int loop = -1;
+            if (loopMatch.Success && int.TryParse(loopMatch.Groups[1].Value, out loop))
+            {
+                Plugin.Log.LogInfo($"[SaveSlotManager] DetectPart1Progression: currentLoop={loop}");
+                if (loop >= 4)
+                {
+                    Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: currentLoop >= 4 → Акт 1");
+                    return 1;
+                }
+            }
+
+            // 4) playTime.
+            float pt = -1f;
+            var playTimeMatch = Regex.Match(json, @"""playTime""\s*:\s*([0-9]+(?:\.[0-9]+)?)");
+            if (playTimeMatch.Success && float.TryParse(playTimeMatch.Groups[1].Value,
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out pt))
+            {
+                Plugin.Log.LogInfo($"[SaveSlotManager] DetectPart1Progression: playTime={pt}");
+            }
+
+            // 5) Обучение (Акт 0) — ТОЛЬКО если все признаки обучения совпадают:
+            //    - currentLoop 1–3 (или не найден)
+            //    - completedEvents пустой или null
+            //    - playTime < 30 секунд (или не найден)
+            //    - currency == 0
+            //    Если хотя бы одно условие не выполняется — это Акт 1.
+            bool isTutorial = true;
+            if (loop > 3) isTutorial = false;
+            if (events != null && events.Count > 0) isTutorial = false;
+            if (pt > 30f) isTutorial = false;
+
+            if (isTutorial)
+            {
+                Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: all tutorial indicators match → Акт 0");
+                return 0;
+            }
+
+            // 6) По умолчанию — Акт 1.
+            Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: not tutorial → Акт 1");
             return 1;
+        }
+
+        /// <summary>
+        /// Извлекает массив completedEvents (List&lt;int&gt;) из JSON сейва.
+        /// Возвращает null, если поле не найдено — тогда вызывающий код использует
+        /// запасные эвристики.
+        /// </summary>
+        private static List<int>? ParseCompletedEvents(string json)
+        {
+            try
+            {
+                var match = Regex.Match(json, @"""completedEvents""\s*:\s*\[([^\]]*)\]");
+                if (!match.Success) return null;
+
+                var result = new List<int>();
+                foreach (var part in match.Groups[1].Value.Split(','))
+                {
+                    if (int.TryParse(part.Trim(), out int val))
+                        result.Add(val);
+                }
+                return result;
+            }
+            catch { return null; }
         }
 
         /// <summary>

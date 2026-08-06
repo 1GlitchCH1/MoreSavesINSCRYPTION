@@ -12,7 +12,7 @@ namespace SaveSlotsMod
     {
         public const string PluginGuid    = "com.saveslotsmod.inscryption";
         public const string PluginName    = "Save Slots Mod";
-        public const string PluginVersion = "1.0.5";
+        public const string PluginVersion = "1.0.6";
 
         internal static ManualLogSource Log = null!;
 
