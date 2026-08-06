@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "Oe0q8k9R/9E=",
+  "success": true,
+  "projectFilePath": "D:\\Download-2\\project-bolt-sb1-dh4lvx18 (2)\\project\\SaveSlotsMod\\SaveSlotsMod.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\user\\.nuget\\packages\\microsoft.netframework.referenceassemblies\\1.0.3\\microsoft.netframework.referenceassemblies.1.0.3.nupkg.sha512",
+    "C:\\Users\\user\\.nuget\\packages\\microsoft.netframework.referenceassemblies.net472\\1.0.3\\microsoft.netframework.referenceassemblies.net472.1.0.3.nupkg.sha512"
+  ],
+  "logs": []
+}

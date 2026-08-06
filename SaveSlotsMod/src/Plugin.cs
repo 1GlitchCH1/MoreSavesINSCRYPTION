@@ -46,6 +46,7 @@ namespace SaveSlotsMod
             if (_pollTimer < POLL_INTERVAL) return;
             _pollTimer = 0f;
 
+            SaveSlotManager.AccumulatePlayTime(Time.deltaTime);
             SaveSlotManager.PollLiveSaveChanges();
         }
     }

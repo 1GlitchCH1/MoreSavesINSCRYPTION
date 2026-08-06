@@ -237,9 +237,13 @@ namespace SaveSlotsMod
         private const float CURSOR_H = 28f;
 
         private GUIStyle? _stTitle, _stSlotName, _stSlotNameMain, _stSlotInfo;
-        private GUIStyle? _stBtnLoad, _stBtnLoadGold, _stBtnDel, _stBtnGray;
-        private GUIStyle? _stBodyText, _stWarnTitle, _stHint;
+        private GUIStyle? _stBtnLoad, _stBtnLoadGold, _stBtnDel, _stBtnGray, _stBtnImport;
+        private GUIStyle? _stBodyText, _stWarnTitle, _stHint, _stStatus;
         private bool      _stylesReady;
+
+        // ── Статус импорта ────────────────────────────────────────────────────────
+        private string _importStatus   = "";
+        private float  _importStatusEnd = 0f;
 
         // ── Lifecycle ─────────────────────────────────────────────────────────────
         public static void Show()
@@ -302,6 +306,12 @@ namespace SaveSlotsMod
 
             if (GUI.Button(new Rect(cancelX, cancelY, cancelW, cancelH), "← Назад в меню", _stBtnGray!))
                 OnCancel();
+
+            // ── Статус импорта ───────────────────────────────────────────────────
+            if (!string.IsNullOrEmpty(_importStatus) && Time.realtimeSinceStartup < _importStatusEnd)
+            {
+                GUI.Label(new Rect(px, py + ph + 6, PW, 24), _importStatus, _stStatus!);
+            }
         }
 
         // ── Строка слота ──────────────────────────────────────────────────────────
@@ -321,15 +331,35 @@ namespace SaveSlotsMod
 
             string info;
             if (hasSave)
-                info = meta != null
-                    ? $"{meta.LastSaved.ToLocalTime():dd.MM.yyyy  HH:mm}   •   {meta.ModGuids.Count} мод(ов)"
-                    : "Сохранение (нет данных о модах)";
+            {
+                string dateStr = meta != null
+                    ? meta.LastSaved.ToLocalTime().ToString("dd.MM.yyyy  HH:mm")
+                    : "—";
+                string modStr = meta != null ? $"{meta.ModGuids.Count} мод(ов)" : "—";
+                info = $"{dateStr}   •   {modStr}";
+            }
             else
                 info = isMainSave ? "Основного сохранения нет" : "Пустой слот — Новая игра";
             GUI.Label(new Rect(textX, ry + 34, 320, 22), info, _stSlotInfo!);
 
+            // ── Доп. информация: акт и время ────────────────────────────────────
+            if (hasSave && meta != null)
+            {
+                string actLabel = meta.Act > 0 ? $"Акт {meta.Act}" : "Акт ?";
+                string timeLabel = SaveSlotManager.FormatPlayTime(meta.PlayTime);
+                string progress = $"{actLabel}   •   Время: {timeLabel}";
+                GUI.Label(new Rect(textX, ry + 54, 320, 20), progress, _stSlotInfo!);
+            }
+
             float btnRight = rx + rw - 10;
             int   cap      = slot;
+
+            // ── Кнопка импорта — крайняя справа ───────────────────────────────────
+            float iW = 44f, iH = 36f;
+            float iX = btnRight - iW, iY = ry + (rh - iH) / 2f;
+            if (GUI.Button(new Rect(iX, iY, iW, iH), "↑", _stBtnImport!))
+                OnImportSave(cap);
+            btnRight -= iW + 6;
 
             if (hasSave)
             {
@@ -341,7 +371,7 @@ namespace SaveSlotsMod
 
                 float lW = 106f, lH = 36f;
                 float lX = btnRight - lW, lY = ry + (rh - lH) / 2f;
-                if (GUI.Button(new Rect(lX, lY, lW, lH), "Загрузить",
+                if (GUI.Button(new Rect(lX, lY, lW, lH), "Играть",
                                isMainSave ? _stBtnLoadGold! : _stBtnLoad!))
                     OnSlotChosen(cap, isEmpty: false);
             }
@@ -435,6 +465,32 @@ namespace SaveSlotsMod
                 MenuPatches.ProceedWithNewGame();
             else
                 MenuPatches.ProceedWithLoad();
+        }
+
+        // ── Импорт сейва из файла ────────────────────────────────────────────────────
+        private void OnImportSave(int slot)
+        {
+            string? file = Win32OpenFileDialog.Show(
+                title:  $"Выберите файл сохранения для Слота {slot + 1}",
+                filter: "SaveFile.gwsave (*.gwsave)\0*.gwsave\0Все файлы (*.*)\0*.*\0");
+
+            if (file == null)
+            {
+                ShowImportStatus("Импорт отменён.");
+                return;
+            }
+
+            bool ok = SaveSlotManager.ImportSaveToSlot(slot, file);
+            ShowImportStatus(ok
+                ? $"Сейв загружен в Слот {slot + 1}."
+                : $"Не удалось загрузить сейв в Слот {slot + 1}.");
+        }
+
+        private void ShowImportStatus(string msg)
+        {
+            _importStatus   = msg;
+            _importStatusEnd = Time.realtimeSinceStartup + 4f;
+            Plugin.Log.LogInfo($"[SlotUI] {msg}");
         }
 
         private void OnCancel()
@@ -614,6 +670,7 @@ namespace SaveSlotsMod
             _stBtnLoadGold = MakeBtnStyle(_txGold!);
             _stBtnDel      = MakeBtnStyle(_txRed!);
             _stBtnGray     = MakeBtnStyle(_txGray!);
+            _stBtnImport   = MakeBtnStyle(MakeTex(new Color(0.18f, 0.42f, 0.20f, 1.00f))!);
             _stBodyText = new GUIStyle(GUI.skin.label)
             {
                 fontSize = 12, wordWrap = true,
@@ -631,6 +688,12 @@ namespace SaveSlotsMod
                 fontSize = 10, fontStyle = FontStyle.Italic,
                 alignment = TextAnchor.MiddleCenter,
                 normal = { textColor = new Color(0.50f, 0.50f, 0.50f) }
+            };
+            _stStatus = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 12, fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = new Color(0.85f, 0.95f, 0.75f) }
             };
         }
 

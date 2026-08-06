@@ -5,8 +5,10 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
+using System.Text.RegularExpressions;
 using BepInEx;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace SaveSlotsMod
 {
@@ -57,6 +59,11 @@ namespace SaveSlotsMod
 
         // Чтобы не заспамить лог, если живого сейва нет.
         private static int _missingLivePollTicks = 0;
+
+        // ── Трекинг времени игры ────────────────────────────────────────────────
+        // Накапливаем секунды, проведённые в игровом сценарии (не в меню).
+        // При сохранении мета — сбрасываем в 0, добавив к общему времени слота.
+        private static float _playTimeThisSession = 0f;
 
         /// <summary>Количество слотов с файлом сохранения.</summary>
         public static int SlotCount => Enumerable.Range(0, MaxSlots).Count(SlotHasSave);
@@ -293,6 +300,99 @@ namespace SaveSlotsMod
         public static List<string> GetCurrentModGuids() =>
             BepInEx.Bootstrap.Chainloader.PluginInfos.Keys.OrderBy(g => g).ToList();
 
+        // ── Трекинг времени игры ──────────────────────────────────────────────────
+        /// <summary>
+        /// Накапливает время, проведённое в игровом сценарии (не в меню).
+        /// Вызывается из Plugin.Update().
+        /// </summary>
+        public static void AccumulatePlayTime(float deltaSeconds)
+        {
+            if (SaveSlotUIBehaviour.IsShowing) return;
+            try
+            {
+                string scene = SceneManager.GetActiveScene().name;
+                if (!string.IsNullOrEmpty(scene) && scene.StartsWith("Part"))
+                    _playTimeThisSession += deltaSeconds;
+            }
+            catch { /* ignore */ }
+        }
+
+        /// <summary>Сбрасывает накопленное время сессии (при переключении слота).</summary>
+        public static void ResetPlayTimeSession() => _playTimeThisSession = 0f;
+
+        // ── Чтение прогресса из файла сейва ───────────────────────────────────────
+        /// <summary>
+        /// Читает .gwsave (JSON) и определяет текущий акт (1, 2, 3).
+        /// Возвращает 0 если не удалось определить.
+        /// </summary>
+        public static int ParseSaveAct(string saveFilePath)
+        {
+            try
+            {
+                if (!File.Exists(saveFilePath)) return 0;
+                string json = File.ReadAllText(saveFilePath);
+
+                // Пытаемся найти currentScene — имя сцены содержит Part1/Part2/Part3
+                var sceneMatch = Regex.Match(json, @"""currentScene""\s*:\s*""([^""]+)""");
+                if (sceneMatch.Success)
+                {
+                    string scene = sceneMatch.Groups[1].Value;
+                    if (scene.Contains("Part1")) return 1;
+                    if (scene.Contains("Part2")) return 2;
+                    if (scene.Contains("Part3")) return 3;
+                }
+
+                // Пытаемся найти story — целочисленное поле состояния сюжета
+                var storyMatch = Regex.Match(json, @"""story""\s*:\s*(\d+)");
+                if (storyMatch.Success && int.TryParse(storyMatch.Groups[1].Value, out int story))
+                {
+                    // Грубая карта по известным значениям StoryState:
+                    // 0–15  — Акт 1 (хижина Лешего)
+                    // 16–31 — Акт 2 (надземный мир)
+                    // 32+   — Акт 3 (фабрика P03)
+                    if (story < 16)  return 1;
+                    if (story < 32)  return 2;
+                    return 3;
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[SaveSlotManager] ParseSaveAct error: {ex.Message}");
+            }
+            return 0;
+        }
+
+        // ── Форматирование времени ───────────────────────────────────────────────
+        /// <summary>Форматирует секунды в строку «Hч MMм» или «MM:SS».</summary>
+        public static string FormatPlayTime(float totalSeconds)
+        {
+            if (totalSeconds <= 0f) return "—";
+            var ts = TimeSpan.FromSeconds(totalSeconds);
+            if (ts.TotalHours >= 1)
+                return $"{(int)ts.TotalHours}ч {ts.Minutes:D2}м";
+            return $"{ts.Minutes:D2}:{ts.Seconds:D2}";
+        }
+
+        // ── Построение и сохранение мета с прогрессом и временем ───────────────────
+        /// <summary>
+        /// Создаёт SlotMeta для слота: сохраняет накопленное время сессии,
+        /// парсит акт из файла сейва, сохраняет моды.
+        /// </summary>
+        private static void FlushMeta(int slot)
+        {
+            var existing = LoadSlotMeta(slot);
+            float totalPlay = (existing?.PlayTime ?? 0f) + _playTimeThisSession;
+            int act = ParseSaveAct(SlotSaveFile(slot));
+            SaveSlotMeta(slot, new SlotMeta
+            {
+                LastSaved = DateTime.UtcNow,
+                ModGuids  = existing?.ModGuids ?? GetCurrentModGuids(),
+                Act       = act,
+                PlayTime  = totalPlay
+            });
+            _playTimeThisSession = 0f;
+        }
+
         // ── Резервная копия живого сохранения → активный слот ───────────────────
         /// <summary>
         /// Копирует живое сохранение в файл активного слота.
@@ -308,12 +408,7 @@ namespace SaveSlotsMod
                 var wt = File.GetLastWriteTimeUtc(LiveSavePath);
                 File.Copy(LiveSavePath, SlotSaveFile(ActiveSlot), overwrite: true);
                 _lastCopiedLiveWriteUtc = wt;
-                var existing = LoadSlotMeta(ActiveSlot);
-                SaveSlotMeta(ActiveSlot, new SlotMeta
-                {
-                    LastSaved = DateTime.UtcNow,
-                    ModGuids  = existing?.ModGuids ?? GetCurrentModGuids()
-                });
+                FlushMeta(ActiveSlot);
                 Plugin.Log.LogInfo($"[SaveSlotManager] BackupLiveSave → Слот {ActiveSlot + 1}.");
             }
             catch (Exception ex)
@@ -337,8 +432,10 @@ namespace SaveSlotsMod
                 var wt = File.GetLastWriteTimeUtc(LiveSavePath);
                 File.Copy(LiveSavePath, SlotSaveFile(ActiveSlot), overwrite: true);
                 _lastCopiedLiveWriteUtc = wt;
+                FlushMeta(ActiveSlot);
                 Plugin.Log.LogInfo($"[SaveSlotManager] Живое сохранение → Слот {ActiveSlot + 1}.");
             }
+            ResetPlayTimeSession();
 
             // Устанавливаем целевой слот как живое сохранение
             if (!targetWasEmpty)
@@ -410,11 +507,7 @@ namespace SaveSlotsMod
                 File.Copy(LiveSavePath, SlotSaveFile(ActiveSlot), overwrite: true);
                 _lastCopiedLiveWriteUtc = wt;
 
-                SaveSlotMeta(ActiveSlot, new SlotMeta
-                {
-                    LastSaved = DateTime.UtcNow,
-                    ModGuids  = GetCurrentModGuids()
-                });
+                FlushMeta(ActiveSlot);
 
                 Plugin.Log.LogInfo($"[SaveSlotManager] {reason}: живой сейв → Слот {ActiveSlot + 1}.");
             }
@@ -471,6 +564,57 @@ namespace SaveSlotsMod
 
             Plugin.Log.LogInfo($"[SaveSlotManager] Слот {slot + 1} удалён{(wasActive ? " (был активным — сброс на Слот 1)." : ".")}");
         }
+
+        // ── Импорт сейва из файла ──────────────────────────────────────────────────
+        /// <summary>
+        /// Копирует выбранный файл сохранения в указанный слот.
+        /// Если слот активный — также обновляет живой сейв.
+        /// </summary>
+        public static bool ImportSaveToSlot(int slot, string sourceFilePath)
+        {
+            if (slot < 0 || slot >= MaxSlots)
+            {
+                Plugin.Log.LogWarning($"[SaveSlotManager] ImportSaveToSlot: недопустимый слот {slot}.");
+                return false;
+            }
+            if (!File.Exists(sourceFilePath))
+            {
+                Plugin.Log.LogWarning($"[SaveSlotManager] ImportSaveToSlot: файл не найден '{sourceFilePath}'.");
+                return false;
+            }
+
+            try
+            {
+                File.Copy(sourceFilePath, SlotSaveFile(slot), overwrite: true);
+
+                // При импорте в активный слот — обновляем и живой сейв
+                if (slot == ActiveSlot)
+                {
+                    File.Copy(sourceFilePath, LiveSavePath, overwrite: true);
+                    _lastCopiedLiveWriteUtc = File.GetLastWriteTimeUtc(LiveSavePath);
+                }
+
+                // При импорте сбрасываем время сессии и парсим акт из нового файла
+                _playTimeThisSession = 0f;
+                var existing = LoadSlotMeta(slot);
+                int act = ParseSaveAct(SlotSaveFile(slot));
+                SaveSlotMeta(slot, new SlotMeta
+                {
+                    LastSaved = DateTime.UtcNow,
+                    ModGuids  = GetCurrentModGuids(),
+                    Act       = act,
+                    PlayTime  = existing?.PlayTime ?? 0f
+                });
+
+                Plugin.Log.LogInfo($"[SaveSlotManager] Импортирован сейв из '{sourceFilePath}' → Слот {slot + 1}.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogError($"[SaveSlotManager] ImportSaveToSlot failed: {ex.Message}");
+                return false;
+            }
+        }
     }
 
     [DataContract]
@@ -478,6 +622,8 @@ namespace SaveSlotsMod
     {
         [DataMember] public DateTime     LastSaved { get; set; }
         [DataMember] public List<string> ModGuids  { get; set; } = new List<string>();
+        [DataMember] public int          Act       { get; set; } = 0;
+        [DataMember] public float        PlayTime  { get; set; } = 0f;
     }
 
     public class ModDiff
