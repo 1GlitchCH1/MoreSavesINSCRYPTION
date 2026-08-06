@@ -79,6 +79,9 @@
       <Private>false</Private>
     </Reference>
 
+    <!-- ── Compression (for reading .gwsave gzip files) ────────────────── -->
+    <Reference Include="System.IO.Compression" />
+
     <!-- ── Game assembly ─────────────────────────────────────────────────── -->
     <Reference Include="Assembly-CSharp">
       <HintPath>$(GameFolder)\Inscryption_Data\Managed\Assembly-CSharp.dll</HintPath>

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
+using System.IO.Compression;
 using System.Text.RegularExpressions;
 using BepInEx;
 using UnityEngine;
@@ -90,7 +91,7 @@ namespace SaveSlotsMod
             {
                 try
                 {
-                    string text = File.ReadAllText(mainPath);
+                    string text = ReadSaveFileText(mainPath);
                     mainCorrupted = string.IsNullOrWhiteSpace(text) || !IsValidJson(text);
                 }
                 catch
@@ -324,42 +325,111 @@ namespace SaveSlotsMod
         /// <summary>
         /// Читает .gwsave (JSON) и определяет текущий акт (1, 2, 3).
         /// Возвращает 0 если не удалось определить.
+        ///
+        /// StoryState enum (DiskCardGame):
+        ///   Part1       = 0   — Акт 1 (хижина Лешего)
+        ///   Part1_Boss  = 1   — Босс Акта 1
+        ///   Part2       = 2   — Акт 2 (надземный мир / GBC)
+        ///   Part2_Boss  = 3   — Босс Акта 2
+        ///   Part3       = 4   — Акт 3 (фабрика P03)
+        ///   Part3_Boss  = 5   — Босс Акта 3
+        ///   Finale      = 6   — Финал (Гримора)
+        ///   Ascension   = 7   — Кейси-мод
         /// </summary>
+        // ── Чтение .gwsave с распаковкой GZip ─────────────────────────────────────
+        /// <summary>
+        /// Читает файл сохранения Inscryption (.gwsave) как текст.
+        /// Файлы .gwsave — это GZip-сжатый JSON, поэтому простое ReadAllText
+        /// выдаёт бинарный мусор. Здесь мы определяем GZip-заголовок (0x1F 0x8B)
+        /// и распаковываем; если файл оказался обычным текстом — возвращаем как есть.
+        /// </summary>
+        private static string ReadSaveFileText(string path)
+        {
+            byte[] bytes = File.ReadAllBytes(path);
+            if (bytes.Length >= 2 && bytes[0] == 0x1F && bytes[1] == 0x8B)
+            {
+                using var ms = new MemoryStream(bytes);
+                using var gz = new GZipStream(ms, CompressionMode.Decompress);
+                using var reader = new StreamReader(gz, System.Text.Encoding.UTF8);
+                return reader.ReadToEnd();
+            }
+            return System.Text.Encoding.UTF8.GetString(bytes);
+        }
+
         public static int ParseSaveAct(string saveFilePath)
         {
             try
             {
                 if (!File.Exists(saveFilePath)) return 0;
-                string json = File.ReadAllText(saveFilePath);
+                string json = ReadSaveFileText(saveFilePath);
 
-                // Пытаемся найти currentScene — имя сцены содержит Part1/Part2/Part3
+                // 1) Пытаемся найти storyState — целочисленное поле состояния сюжета.
+                //    Inscryption (JsonUtility) сериализует enum StoryState как int.
+                //    Имя поля в SaveData — "storyState". Также проверяем "story"
+                //    на случай старых/модифицированных сборок.
+                var storyMatch = Regex.Match(json, @"""storyState""\s*:\s*(\d+)");
+                if (!storyMatch.Success)
+                    storyMatch = Regex.Match(json, @"""story""\s*:\s*(\d+)");
+                if (storyMatch.Success && int.TryParse(storyMatch.Groups[1].Value, out int story))
+                {
+                    Plugin.Log.LogInfo($"[SaveSlotManager] ParseSaveAct: storyState={story}");
+                    if (story <= 1) return 1;  // Part1 / Part1_Boss
+                    if (story <= 3) return 2;  // Part2 / Part2_Boss
+                    if (story <= 5) return 3;  // Part3 / Part3_Boss
+                    if (story == 6) return 3;  // Finale — показываем как Акт 3
+                    if (story >= 7) return 0; // Ascension / Kaycee's Mod — не основной сюжет
+                }
+
+                // 2) Запасной вариант: ищем currentScene — имя сцены содержит Part1/Part2/Part3
                 var sceneMatch = Regex.Match(json, @"""currentScene""\s*:\s*""([^""]+)""");
                 if (sceneMatch.Success)
                 {
                     string scene = sceneMatch.Groups[1].Value;
+                    Plugin.Log.LogInfo($"[SaveSlotManager] ParseSaveAct: currentScene='{scene}'");
                     if (scene.Contains("Part1")) return 1;
-                    if (scene.Contains("Part2")) return 2;
+                    if (scene.Contains("Part2") || scene.Contains("GBC")) return 2;
                     if (scene.Contains("Part3")) return 3;
                 }
 
-                // Пытаемся найти story — целочисленное поле состояния сюжета
-                var storyMatch = Regex.Match(json, @"""story""\s*:\s*(\d+)");
-                if (storyMatch.Success && int.TryParse(storyMatch.Groups[1].Value, out int story))
-                {
-                    // Грубая карта по известным значениям StoryState:
-                    // 0–15  — Акт 1 (хижина Лешего)
-                    // 16–31 — Акт 2 (надземный мир)
-                    // 32+   — Акт 3 (фабрика P03)
-                    if (story < 16)  return 1;
-                    if (story < 32)  return 2;
+                // 3) Запасной вариант по секциям данных:
+                //    part3Data с currency > 0 → Акт 3, gbcData с currency > 0 → Акт 2
+                if (Regex.IsMatch(json, @"""part3Data""\s*:\s*\{[^}]*""currency""\s*:\s*[1-9]"))
                     return 3;
-                }
+                if (Regex.IsMatch(json, @"""gbcData""\s*:\s*\{[^}]*""currency""\s*:\s*[1-9]"))
+                    return 2;
+
+                // 4) Если ничего не помогло — логируем первые 500 символов для диагностики
+                Plugin.Log.LogWarning($"[SaveSlotManager] ParseSaveAct: не удалось определить акт. JSON (первые 500): {json.Substring(0, Math.Min(500, json.Length))}");
             }
             catch (Exception ex)
             {
                 Plugin.Log.LogWarning($"[SaveSlotManager] ParseSaveAct error: {ex.Message}");
             }
             return 0;
+        }
+
+        // ── Чтение времени игры из файла сейва ─────────────────────────────────────
+        /// <summary>
+        /// Читает поле playTime (float) из .gwsave.
+        /// Возвращает -1 если не удалось прочитать.
+        /// </summary>
+        public static float ParseSavePlayTime(string saveFilePath)
+        {
+            try
+            {
+                if (!File.Exists(saveFilePath)) return -1f;
+                string json = ReadSaveFileText(saveFilePath);
+
+                // playTime хранится как число с плавающей точкой на верхнем уровне JSON
+                var match = Regex.Match(json, @"""playTime""\s*:\s*([0-9]+(?:\.[0-9]+)?)");
+                if (match.Success && float.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float pt))
+                    return pt;
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[SaveSlotManager] ParseSavePlayTime error: {ex.Message}");
+            }
+            return -1f;
         }
 
         // ── Форматирование времени ───────────────────────────────────────────────
@@ -375,13 +445,15 @@ namespace SaveSlotsMod
 
         // ── Построение и сохранение мета с прогрессом и временем ───────────────────
         /// <summary>
-        /// Создаёт SlotMeta для слота: сохраняет накопленное время сессии,
-        /// парсит акт из файла сейва, сохраняет моды.
+        /// Создаёт SlotMeta для слота: читает время игры из файла сейва,
+        /// парсит акт, сохраняет моды.
         /// </summary>
         private static void FlushMeta(int slot)
         {
             var existing = LoadSlotMeta(slot);
-            float totalPlay = (existing?.PlayTime ?? 0f) + _playTimeThisSession;
+            // Читаем playTime прямо из файла сейва — игра сама ведёт учёт
+            float filePlayTime = ParseSavePlayTime(SlotSaveFile(slot));
+            float totalPlay = filePlayTime >= 0f ? filePlayTime : (existing?.PlayTime ?? 0f) + _playTimeThisSession;
             int act = ParseSaveAct(SlotSaveFile(slot));
             SaveSlotMeta(slot, new SlotMeta
             {
@@ -594,16 +666,17 @@ namespace SaveSlotsMod
                     _lastCopiedLiveWriteUtc = File.GetLastWriteTimeUtc(LiveSavePath);
                 }
 
-                // При импорте сбрасываем время сессии и парсим акт из нового файла
+                // При импорте читаем playTime и акт из нового файла
                 _playTimeThisSession = 0f;
                 var existing = LoadSlotMeta(slot);
                 int act = ParseSaveAct(SlotSaveFile(slot));
+                float filePlayTime = ParseSavePlayTime(SlotSaveFile(slot));
                 SaveSlotMeta(slot, new SlotMeta
                 {
                     LastSaved = DateTime.UtcNow,
                     ModGuids  = GetCurrentModGuids(),
                     Act       = act,
-                    PlayTime  = existing?.PlayTime ?? 0f
+                    PlayTime  = filePlayTime >= 0f ? filePlayTime : (existing?.PlayTime ?? 0f)
                 });
 
                 Plugin.Log.LogInfo($"[SaveSlotManager] Импортирован сейв из '{sourceFilePath}' → Слот {slot + 1}.");
