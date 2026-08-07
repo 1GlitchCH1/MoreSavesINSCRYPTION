@@ -29,6 +29,7 @@ namespace SaveSlotsMod
         // Третий обучающий забег завершён — Леший говорит, что больше не будет
         // тренировать игрока. Это граница между Актом 0 (обучение) и Актом 1.
         private const int StoryEvent_TutorialRun3Completed = 38;
+        private const int StoryEvent_KayceesMod = 162;
 
         // ── Папки ────────────────────────────────────────────────────────────────
         // Живой сейв Inscryption (Steam) лежит в КОРНЕ папки установки игры,
@@ -434,8 +435,9 @@ namespace SaveSlotsMod
 
         // ── Определение Kaycee's Mod (Ascension) в сейве ──────────────────────────
         /// <summary>
-        /// Проверяет, находится ли сейв в режиме Kaycee's Mod (Ascension).
-        /// StoryState.Ascension = 7 и выше — это KCM, не основной сюжет.
+        /// Проверяет, находится ли сейв в режиме Kaycee's Mod.
+        /// В разных версиях игры признак хранится либо в storyState, либо
+        /// как событие 162 в storyEvents.completedEvents.
         /// </summary>
         public static bool ParseSaveKayceesMod(string saveFilePath)
         {
@@ -443,9 +445,13 @@ namespace SaveSlotsMod
             {
                 if (!File.Exists(saveFilePath)) return false;
                 string json = ReadSaveFileText(saveFilePath);
-                var match = Regex.Match(json, @"""storyState""\s*:\s*(\d+)");
-                if (match.Success && int.TryParse(match.Groups[1].Value, out int story))
-                    return story >= 7;
+
+                var storyMatch = Regex.Match(json, @"""storyState""\s*:\s*(\d+)");
+                if (storyMatch.Success && int.TryParse(storyMatch.Groups[1].Value, out int story) && story >= 7)
+                    return true;
+
+                var completedEvents = ParseCompletedEvents(json);
+                return completedEvents != null && completedEvents.Contains(StoryEvent_KayceesMod);
             }
             catch (Exception ex)
             {
@@ -484,21 +490,22 @@ namespace SaveSlotsMod
                 }
 
                 string json = ReadSaveFileText(LiveSavePath);
-                var match = Regex.Match(json, @"""storyState""\s*:\s*(\d+)");
-                if (!match.Success)
+                bool changed = false;
+                string newJson = Regex.Replace(json, @"(""storyState""\s*:\s*)\d+", match =>
                 {
-                    Plugin.Log.LogWarning("[SaveSlotManager] DisableKayceesMod: storyState не найден в сейве.");
-                    return;
-                }
+                    if (!int.TryParse(match.Value.Substring(match.Value.LastIndexOf(':') + 1).Trim(), out int story) || story < 7)
+                        return match.Value;
+                    changed = true;
+                    return match.Groups[1].Value + "6";
+                });
 
-                if (!int.TryParse(match.Groups[1].Value, out int story) || story < 7)
+                newJson = RemoveKayceesModEvent(newJson, ref changed);
+                if (!changed)
                 {
                     Plugin.Log.LogInfo("[SaveSlotManager] DisableKayceesMod: KCM не активен, ничего не делаем.");
                     return;
                 }
 
-                // Ascension (7+) → Finale (6): выходим из KCM в основной сюжет.
-                string newJson = Regex.Replace(json, @"""storyState""\s*:\s*\d+", @"""storyState"": 6");
                 WriteSaveFileText(LiveSavePath, newJson);
 
                 File.Copy(LiveSavePath, SlotSaveFile(ActiveSlot), overwrite: true);
@@ -557,6 +564,27 @@ namespace SaveSlotsMod
         /// Возвращает null, если поле не найдено — тогда вызывающий код использует
         /// запасные эвристики.
         /// </summary>
+        private static string RemoveKayceesModEvent(string json, ref bool changed)
+        {
+            bool localChanged = false;
+            string result = Regex.Replace(
+                json,
+                @"(""completedEvents""\s*:\s*\{.*?""\$rcontent""\s*:\s*\[)(.*?)(\])",
+                match =>
+                {
+                    string content = match.Groups[2].Value;
+                    string updated = Regex.Replace(content, @"(?<=^|,)\s*162\s*(?=,|$)", "", RegexOptions.Multiline);
+                    updated = Regex.Replace(updated, @",\s*,", ",");
+                    updated = Regex.Replace(updated, @"^\s*,|,\s*$", "", RegexOptions.Multiline);
+                    if (updated == content) return match.Value;
+                    localChanged = true;
+                    return match.Groups[1].Value + updated + match.Groups[3].Value;
+                },
+                RegexOptions.Singleline);
+            changed = localChanged;
+            return result;
+        }
+
         private static List<int>? ParseCompletedEvents(string json)
         {
             try
