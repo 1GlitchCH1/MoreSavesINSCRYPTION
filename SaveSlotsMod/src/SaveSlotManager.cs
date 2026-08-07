@@ -151,7 +151,8 @@ namespace SaveSlotsMod
                     {
                         LastSaved = File.GetLastWriteTimeUtc(LiveSavePath),
                         ModGuids  = GetCurrentModGuids(),
-                        Act       = ParseSaveAct(SlotSaveFile(0))
+                        Act       = ParseSaveAct(SlotSaveFile(0)),
+                        KayceesMod = ParseSaveKayceesMod(SlotSaveFile(0))
                     });
                     Plugin.Log.LogInfo("[SaveSlotManager] Первый запуск: перенесли живое сохранение → Слот 0 (основное).");
                 }
@@ -363,6 +364,20 @@ namespace SaveSlotsMod
             return System.Text.Encoding.UTF8.GetString(bytes);
         }
 
+        /// <summary>
+        /// Записывает JSON в .gwsave с GZip-сжатием (формат Inscryption).
+        /// </summary>
+        private static void WriteSaveFileText(string path, string json)
+        {
+            using (var ms = new MemoryStream())
+            {
+                using (var gz = new GZipStream(ms, CompressionMode.Compress))
+                using (var writer = new StreamWriter(gz, System.Text.Encoding.UTF8))
+                    writer.Write(json);
+                File.WriteAllBytes(path, ms.ToArray());
+            }
+        }
+
         public static int ParseSaveAct(string saveFilePath)
         {
             try
@@ -415,6 +430,87 @@ namespace SaveSlotsMod
                 Plugin.Log.LogWarning($"[SaveSlotManager] ParseSaveAct error: {ex.Message}");
             }
             return -1;
+        }
+
+        // ── Определение Kaycee's Mod (Ascension) в сейве ──────────────────────────
+        /// <summary>
+        /// Проверяет, находится ли сейв в режиме Kaycee's Mod (Ascension).
+        /// StoryState.Ascension = 7 и выше — это KCM, не основной сюжет.
+        /// </summary>
+        public static bool ParseSaveKayceesMod(string saveFilePath)
+        {
+            try
+            {
+                if (!File.Exists(saveFilePath)) return false;
+                string json = ReadSaveFileText(saveFilePath);
+                var match = Regex.Match(json, @"""storyState""\s*:\s*(\d+)");
+                if (match.Success && int.TryParse(match.Groups[1].Value, out int story))
+                    return story >= 7;
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[SaveSlotManager] ParseSaveKayceesMod error: {ex.Message}");
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Проверяет, активен ли Kaycee's Mod в текущем живом сейве.
+        /// </summary>
+        public static bool IsKayceesModActive()
+        {
+            try
+            {
+                RefreshLiveSavePath(logIfChanged: false);
+                if (!File.Exists(LiveSavePath)) return false;
+                return ParseSaveKayceesMod(LiveSavePath);
+            }
+            catch { return false; }
+        }
+
+        /// <summary>
+        /// Отключает Kaycee's Mod в живом сейве: меняет storyState с Ascension (7+)
+        /// на Finale (6) и копирует обновлённый сейв в активный слот.
+        /// </summary>
+        public static void DisableKayceesMod()
+        {
+            try
+            {
+                RefreshLiveSavePath(logIfChanged: false);
+                if (!File.Exists(LiveSavePath))
+                {
+                    Plugin.Log.LogWarning("[SaveSlotManager] DisableKayceesMod: живой сейв не найден.");
+                    return;
+                }
+
+                string json = ReadSaveFileText(LiveSavePath);
+                var match = Regex.Match(json, @"""storyState""\s*:\s*(\d+)");
+                if (!match.Success)
+                {
+                    Plugin.Log.LogWarning("[SaveSlotManager] DisableKayceesMod: storyState не найден в сейве.");
+                    return;
+                }
+
+                if (!int.TryParse(match.Groups[1].Value, out int story) || story < 7)
+                {
+                    Plugin.Log.LogInfo("[SaveSlotManager] DisableKayceesMod: KCM не активен, ничего не делаем.");
+                    return;
+                }
+
+                // Ascension (7+) → Finale (6): выходим из KCM в основной сюжет.
+                string newJson = Regex.Replace(json, @"""storyState""\s*:\s*\d+", @"""storyState"": 6");
+                WriteSaveFileText(LiveSavePath, newJson);
+
+                File.Copy(LiveSavePath, SlotSaveFile(ActiveSlot), overwrite: true);
+                _lastCopiedLiveWriteUtc = File.GetLastWriteTimeUtc(LiveSavePath);
+                FlushMeta(ActiveSlot);
+
+                Plugin.Log.LogInfo("[SaveSlotManager] KCM отключён в сейве. storyState: Ascension → Finale.");
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogError($"[SaveSlotManager] DisableKayceesMod error: {ex.Message}");
+            }
         }
 
         // ── Определение прогрессии в Part1 (обучение vs. полный акт) ──────────────
@@ -498,9 +594,11 @@ namespace SaveSlotsMod
                 if (existing == null) continue;
 
                 int detectedAct = ParseSaveAct(SlotSaveFile(slot));
-                if (detectedAct < 0 || detectedAct == existing.Act) continue;
+                bool detectedKcm = ParseSaveKayceesMod(SlotSaveFile(slot));
+                if (detectedAct < 0 || (detectedAct == existing.Act && detectedKcm == existing.KayceesMod)) continue;
 
                 existing.Act = detectedAct;
+                existing.KayceesMod = detectedKcm;
                 SaveSlotMeta(slot, existing);
                 Plugin.Log.LogInfo(
                     $"[SaveSlotManager] Обновлена метка Акта для Слота {slot + 1}: {GetActLabel(detectedAct)}.");
@@ -570,12 +668,14 @@ namespace SaveSlotsMod
             float filePlayTime = ParseSavePlayTime(SlotSaveFile(slot));
             float totalPlay = filePlayTime >= 0f ? filePlayTime : (existing?.PlayTime ?? 0f) + _playTimeThisSession;
             int act = ParseSaveAct(SlotSaveFile(slot));
+            bool kcm = ParseSaveKayceesMod(SlotSaveFile(slot));
             SaveSlotMeta(slot, new SlotMeta
             {
                 LastSaved = DateTime.UtcNow,
                 ModGuids  = existing?.ModGuids ?? GetCurrentModGuids(),
                 Act       = act,
-                PlayTime  = totalPlay
+                PlayTime  = totalPlay,
+                KayceesMod = kcm
             });
             _playTimeThisSession = 0f;
         }
@@ -822,12 +922,14 @@ namespace SaveSlotsMod
                 var existing = LoadSlotMeta(slot);
                 int act = ParseSaveAct(SlotSaveFile(slot));
                 float filePlayTime = ParseSavePlayTime(SlotSaveFile(slot));
+                bool kcmImport = ParseSaveKayceesMod(SlotSaveFile(slot));
                 SaveSlotMeta(slot, new SlotMeta
                 {
                     LastSaved = DateTime.UtcNow,
                     ModGuids  = GetCurrentModGuids(),
                     Act       = act,
-                    PlayTime  = filePlayTime >= 0f ? filePlayTime : (existing?.PlayTime ?? 0f)
+                    PlayTime  = filePlayTime >= 0f ? filePlayTime : (existing?.PlayTime ?? 0f),
+                    KayceesMod = kcmImport
                 });
 
                 Plugin.Log.LogInfo($"[SaveSlotManager] Импортирован сейв из '{sourceFilePath}' → Слот {slot + 1}.");
@@ -848,6 +950,7 @@ namespace SaveSlotsMod
         [DataMember] public List<string> ModGuids  { get; set; } = new List<string>();
         [DataMember] public int          Act       { get; set; } = -1;
         [DataMember] public float        PlayTime  { get; set; } = 0f;
+        [DataMember] public bool         KayceesMod { get; set; } = false;
     }
 
     public class ModDiff

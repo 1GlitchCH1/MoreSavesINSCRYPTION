@@ -24,6 +24,12 @@ namespace SaveSlotsMod
         private float _pollTimer = 0f;
         private const float POLL_INTERVAL = 0.25f;
 
+        // ── Горячая клавиша Shift+K+M ──────────────────────────────────────────
+        // В оригинале запускает Kaycee's Mod DLC.
+        // Если уже в KCM — отключает его из сейва.
+        private float _kcmKeyCooldownTime = -100f;
+        private const float KCM_KEY_COOLDOWN = 1f;
+
         private void Awake()
         {
             Log = Logger;
@@ -39,6 +45,8 @@ namespace SaveSlotsMod
 
         private void Update()
         {
+            CheckKayceesModHotkey();
+
             // Не трогаем файлы, пока открыт пикер слотов (там идёт SwitchToSlot)
             if (SaveSlotUIBehaviour.IsShowing) return;
 
@@ -48,6 +56,31 @@ namespace SaveSlotsMod
 
             SaveSlotManager.AccumulatePlayTime(Time.deltaTime);
             SaveSlotManager.PollLiveSaveChanges();
+        }
+
+        /// <summary>
+        /// Обработка Shift+K+M: если игрок уже в Kaycee's Mod — отключает KCM из сейва.
+        /// Если KCM не активен — ничего не делаем (оригинальная игра сама запустит DLC).
+        /// </summary>
+        private void CheckKayceesModHotkey()
+        {
+            if (SaveSlotUIBehaviour.IsShowing) return;
+
+            bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            bool k = Input.GetKey(KeyCode.K);
+            bool m = Input.GetKey(KeyCode.M);
+
+            if (shift && k && m && (Input.GetKeyDown(KeyCode.K) || Input.GetKeyDown(KeyCode.M)))
+            {
+                if (Time.realtimeSinceStartup - _kcmKeyCooldownTime < KCM_KEY_COOLDOWN) return;
+                _kcmKeyCooldownTime = Time.realtimeSinceStartup;
+
+                if (SaveSlotManager.IsKayceesModActive())
+                {
+                    Log.LogInfo("[Plugin] Shift+K+M: отключаем Kaycee's Mod из сейва.");
+                    SaveSlotManager.DisableKayceesMod();
+                }
+            }
         }
     }
 }

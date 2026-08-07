@@ -241,7 +241,7 @@ namespace SaveSlotsMod
 
         private GUIStyle? _stTitle, _stSlotName, _stSlotNameMain, _stSlotInfo;
         private GUIStyle? _stBtnLoad, _stBtnLoadGold, _stBtnDel, _stBtnGray, _stBtnImport;
-        private GUIStyle? _stBodyText, _stWarnTitle, _stHint, _stStatus;
+        private GUIStyle? _stBodyText, _stWarnTitle, _stHint, _stStatus, _stKcmLabel;
         private bool      _stylesReady;
 
         // ── Статус импорта ────────────────────────────────────────────────────────
@@ -393,6 +393,12 @@ namespace SaveSlotsMod
                 string timeLabel = SaveSlotManager.FormatPlayTime(meta.PlayTime);
                 string progress = $"{actLabel}   •   Время: {timeLabel}";
                 GUI.Label(new Rect(textX, ry + 54, 320, 20), progress, _stSlotInfo!);
+
+                if (meta.KayceesMod)
+                {
+                    Vector2 progSize = _stSlotInfo!.CalcSize(new GUIContent(progress));
+                    GUI.Label(new Rect(textX + progSize.x + 12, ry + 54, 60, 20), "KCM", _stKcmLabel!);
+                }
             }
 
             float btnRight = rx + rw - 10;
@@ -735,6 +741,11 @@ namespace SaveSlotsMod
                 fontSize = 12, fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
                 normal = { textColor = new Color(0.85f, 0.95f, 0.75f) }
+            };
+            _stKcmLabel = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 11, fontStyle = FontStyle.Bold,
+                normal = { textColor = new Color(1f, 0.15f, 0.15f) }
             };
         }
 
