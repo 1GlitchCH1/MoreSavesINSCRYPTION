@@ -1,0 +1,1892 @@
+{
+    "$id": 0,
+    "$type": "0|SaveFile, Assembly-CSharp",
+    "randomSeed": 859479875,
+    "currentScene": "Part1_Cabin",
+    "playTime": 22.7126331,
+    "storyEvents": {
+        "$id": 1,
+        "$type": "1|DiskCardGame.StoryEventsData, Assembly-CSharp",
+        "completedEvents": {
+            "$id": 2,
+            "$type": "2|System.Collections.Generic.List`1[[DiskCardGame.StoryEvent, Assembly-CSharp]], mscorlib",
+            "$rlength": 1,
+            "$rcontent": [
+                0
+            ]
+        }
+    },
+    "dialogueData": {
+        "$id": 3,
+        "$type": "3|DiskCardGame.DialogueEventsData, Assembly-CSharp",
+        "eventData": {
+            "$id": 4,
+            "$type": "4|System.Collections.Generic.List`1[[DiskCardGame.DialogueEventsData+EventSaveData, Assembly-CSharp]], mscorlib",
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        }
+    },
+    "progressionData": {
+        "$id": 5,
+        "$type": "5|DiskCardGame.ProgressionData, Assembly-CSharp",
+        "learnedAbilities": {
+            "$id": 6,
+            "$type": "6|System.Collections.Generic.List`1[[DiskCardGame.Ability, Assembly-CSharp]], mscorlib",
+            "$rlength": 1,
+            "$rcontent": [
+                19
+            ]
+        },
+        "learnedMechanics": {
+            "$id": 7,
+            "$type": "7|System.Collections.Generic.List`1[[DiskCardGame.MechanicsConcept, Assembly-CSharp]], mscorlib",
+            "$rlength": 1,
+            "$rcontent": [
+                7
+            ]
+        },
+        "learnedCards": {
+            "$id": 8,
+            "$type": "8|System.Collections.Generic.List`1[[System.String, mscorlib]], mscorlib",
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "introducedCards": {
+            "$id": 9,
+            "$type": 8,
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "introducedConsumables": {
+            "$id": 10,
+            "$type": 8,
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        }
+    },
+    "currentRun": {
+        "$id": 11,
+        "$type": "9|DiskCardGame.RunState, Assembly-CSharp",
+        "playerDeck": {
+            "$id": 12,
+            "$type": "10|DiskCardGame.DeckInfo, Assembly-CSharp",
+            "cardIds": {
+                "$id": 13,
+                "$type": 8,
+                "$rlength": 4,
+                "$rcontent": [
+                    "Stoat_Talking",
+                    "Wolf",
+                    "Wolf",
+                    "Snapper"
+                ]
+            },
+            "boonIds": {
+                "$id": 14,
+                "$type": "11|System.Collections.Generic.List`1[[DiskCardGame.BoonData+Type, Assembly-CSharp]], mscorlib",
+                "$rlength": 0,
+                "$rcontent": [
+                ]
+            },
+            "cardIdModInfos": {
+                "$id": 15,
+                "$type": "12|System.Collections.Generic.Dictionary`2[[System.String, mscorlib],[System.Collections.Generic.List`1[[DiskCardGame.CardModificationInfo, Assembly-CSharp]], mscorlib]], mscorlib",
+                "comparer": {
+                    "$id": 16,
+                    "$type": "13|System.Collections.Generic.InternalStringComparer, mscorlib"
+                },
+                "$rlength": 4,
+                "$rcontent": [
+                    {
+                        "$k": "Stoat_Talking",
+                        "$v": {
+                            "$id": 17,
+                            "$type": "14|System.Collections.Generic.List`1[[DiskCardGame.CardModificationInfo, Assembly-CSharp]], mscorlib",
+                            "$rlength": 0,
+                            "$rcontent": [
+                            ]
+                        }
+                    },
+                    {
+                        "$k": "Wolf",
+                        "$v": {
+                            "$id": 18,
+                            "$type": 14,
+                            "$rlength": 0,
+                            "$rcontent": [
+                            ]
+                        }
+                    },
+                    {
+                        "$k": "Wolf#1",
+                        "$v": {
+                            "$id": 19,
+                            "$type": 14,
+                            "$rlength": 0,
+                            "$rcontent": [
+                            ]
+                        }
+                    },
+                    {
+                        "$k": "Snapper",
+                        "$v": {
+                            "$id": 20,
+                            "$type": 14,
+                            "$rlength": 0,
+                            "$rcontent": [
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "totems": {
+            "$id": 21,
+            "$type": "15|System.Collections.Generic.List`1[[DiskCardGame.TotemDefinition, Assembly-CSharp]], mscorlib",
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "totemTops": {
+            "$id": 22,
+            "$type": "16|System.Collections.Generic.List`1[[DiskCardGame.Tribe, Assembly-CSharp]], mscorlib",
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "totemBottoms": {
+            "$id": 23,
+            "$type": 6,
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "consumables": {
+            "$id": 24,
+            "$type": 8,
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "currency": 0,
+        "playerLives": 2,
+        "maxPlayerLives": 2,
+        "storyEventsCompleted": {
+            "$id": 25,
+            "$type": 2,
+            "$rlength": 1,
+            "$rcontent": [
+                0
+            ]
+        },
+        "eyeState": 0,
+        "runIntroCompleted": true,
+        "leshyBossBattle": false,
+        "riggedDraws": {
+            "$id": 26,
+            "$type": 8,
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "bonelordPuzzleActive": false,
+        "skullTeeth": 3,
+        "survivorsDead": false,
+        "trapperKnifeBought": false,
+        "map": {
+            "$id": 27,
+            "$type": "17|DiskCardGame.MapData, Assembly-CSharp",
+            "gridLength": 13,
+            "mapLength": 2.405,
+            "nodeData": {
+                "$id": 28,
+                "$type": "18|System.Collections.Generic.List`1[[DiskCardGame.NodeData, Assembly-CSharp]], mscorlib",
+                "$rlength": 16,
+                "$rcontent": [
+                    {
+                        "$id": 29,
+                        "$type": "19|DiskCardGame.CardBattleNodeData, Assembly-CSharp",
+                        "id": 4227,
+                        "position": {
+                            "$type": "20|UnityEngine.Vector2, UnityEngine.CoreModule",
+                            0.514232337,
+                            0.379446626
+                        },
+                        "prefabPath": null,
+                        "gridX": 0,
+                        "gridY": 0,
+                        "connectedNodes": {
+                            "$id": 30,
+                            "$type": 18,
+                            "$rlength": 1,
+                            "$rcontent": [
+                                {
+                                    "$id": 31,
+                                    "$type": "21|DiskCardGame.CardChoicesNodeData, Assembly-CSharp",
+                                    "id": 4228,
+                                    "position": {
+                                        "$type": 20,
+                                        0.5235802,
+                                        0.576694846
+                                    },
+                                    "prefabPath": null,
+                                    "gridX": 0,
+                                    "gridY": 1,
+                                    "connectedNodes": {
+                                        "$id": 32,
+                                        "$type": 18,
+                                        "$rlength": 1,
+                                        "$rcontent": [
+                                            {
+                                                "$id": 33,
+                                                "$type": "22|DiskCardGame.GainConsumablesNodeData, Assembly-CSharp",
+                                                "id": 4229,
+                                                "position": {
+                                                    "$type": 20,
+                                                    0.5017968,
+                                                    0.794935346
+                                                },
+                                                "prefabPath": null,
+                                                "gridX": 0,
+                                                "gridY": 2,
+                                                "connectedNodes": {
+                                                    "$id": 34,
+                                                    "$type": 18,
+                                                    "$rlength": 1,
+                                                    "$rcontent": [
+                                                        {
+                                                            "$id": 35,
+                                                            "$type": 19,
+                                                            "id": 4230,
+                                                            "position": {
+                                                                "$type": 20,
+                                                                0.4778705,
+                                                                0.943368852
+                                                            },
+                                                            "prefabPath": null,
+                                                            "gridX": 0,
+                                                            "gridY": 3,
+                                                            "connectedNodes": {
+                                                                "$id": 36,
+                                                                "$type": 18,
+                                                                "$rlength": 1,
+                                                                "$rcontent": [
+                                                                    {
+                                                                        "$id": 37,
+                                                                        "$type": 21,
+                                                                        "id": 4231,
+                                                                        "position": {
+                                                                            "$type": 20,
+                                                                            0.523998737,
+                                                                            1.14700425
+                                                                        },
+                                                                        "prefabPath": null,
+                                                                        "gridX": 0,
+                                                                        "gridY": 4,
+                                                                        "connectedNodes": {
+                                                                            "$id": 38,
+                                                                            "$type": 18,
+                                                                            "$rlength": 1,
+                                                                            "$rcontent": [
+                                                                                {
+                                                                                    "$id": 39,
+                                                                                    "$type": "23|DiskCardGame.CardMergeNodeData, Assembly-CSharp",
+                                                                                    "id": 4232,
+                                                                                    "position": {
+                                                                                        "$type": 20,
+                                                                                        0.5249988,
+                                                                                        1.32475567
+                                                                                    },
+                                                                                    "prefabPath": null,
+                                                                                    "gridX": 0,
+                                                                                    "gridY": 5,
+                                                                                    "connectedNodes": {
+                                                                                        "$id": 40,
+                                                                                        "$type": 18,
+                                                                                        "$rlength": 1,
+                                                                                        "$rcontent": [
+                                                                                            {
+                                                                                                "$id": 41,
+                                                                                                "$type": "24|DiskCardGame.TotemBattleNodeData, Assembly-CSharp",
+                                                                                                "id": 4233,
+                                                                                                "position": {
+                                                                                                    "$type": 20,
+                                                                                                    0.520048857,
+                                                                                                    1.52493465
+                                                                                                },
+                                                                                                "prefabPath": null,
+                                                                                                "gridX": 0,
+                                                                                                "gridY": 6,
+                                                                                                "connectedNodes": {
+                                                                                                    "$id": 42,
+                                                                                                    "$type": 18,
+                                                                                                    "$rlength": 1,
+                                                                                                    "$rcontent": [
+                                                                                                        {
+                                                                                                            "$id": 43,
+                                                                                                            "$type": 21,
+                                                                                                            "id": 4234,
+                                                                                                            "position": {
+                                                                                                                "$type": 20,
+                                                                                                                0.475000262,
+                                                                                                                1.69511652
+                                                                                                            },
+                                                                                                            "prefabPath": null,
+                                                                                                            "gridX": 0,
+                                                                                                            "gridY": 7,
+                                                                                                            "connectedNodes": {
+                                                                                                                "$id": 44,
+                                                                                                                "$type": 18,
+                                                                                                                "$rlength": 2,
+                                                                                                                "$rcontent": [
+                                                                                                                    {
+                                                                                                                        "$id": 45,
+                                                                                                                        "$type": "25|DiskCardGame.CardStatBoostNodeData, Assembly-CSharp",
+                                                                                                                        "id": 4235,
+                                                                                                                        "position": {
+                                                                                                                            "$type": 20,
+                                                                                                                            0.343523622,
+                                                                                                                            1.85585344
+                                                                                                                        },
+                                                                                                                        "prefabPath": null,
+                                                                                                                        "gridX": 0,
+                                                                                                                        "gridY": 8,
+                                                                                                                        "connectedNodes": {
+                                                                                                                            "$id": 46,
+                                                                                                                            "$type": 18,
+                                                                                                                            "$rlength": 1,
+                                                                                                                            "$rcontent": [
+                                                                                                                                {
+                                                                                                                                    "$id": 47,
+                                                                                                                                    "$type": 19,
+                                                                                                                                    "id": 4237,
+                                                                                                                                    "position": {
+                                                                                                                                        "$type": 20,
+                                                                                                                                        0.5068027,
+                                                                                                                                        2.08905673
+                                                                                                                                    },
+                                                                                                                                    "prefabPath": null,
+                                                                                                                                    "gridX": 0,
+                                                                                                                                    "gridY": 9,
+                                                                                                                                    "connectedNodes": {
+                                                                                                                                        "$id": 48,
+                                                                                                                                        "$type": 18,
+                                                                                                                                        "$rlength": 2,
+                                                                                                                                        "$rcontent": [
+                                                                                                                                            {
+                                                                                                                                                "$id": 49,
+                                                                                                                                                "$type": 21,
+                                                                                                                                                "id": 4238,
+                                                                                                                                                "position": {
+                                                                                                                                                    "$type": 20,
+                                                                                                                                                    0.325021923,
+                                                                                                                                                    2.24895358
+                                                                                                                                                },
+                                                                                                                                                "prefabPath": null,
+                                                                                                                                                "gridX": 0,
+                                                                                                                                                "gridY": 10,
+                                                                                                                                                "connectedNodes": {
+                                                                                                                                                    "$id": 50,
+                                                                                                                                                    "$type": 18,
+                                                                                                                                                    "$rlength": 1,
+                                                                                                                                                    "$rcontent": [
+                                                                                                                                                        {
+                                                                                                                                                            "$id": 51,
+                                                                                                                                                            "$type": 22,
+                                                                                                                                                            "id": 4240,
+                                                                                                                                                            "position": {
+                                                                                                                                                                "$type": 20,
+                                                                                                                                                                0.3720531,
+                                                                                                                                                                2.42322445
+                                                                                                                                                            },
+                                                                                                                                                            "prefabPath": null,
+                                                                                                                                                            "gridX": 0,
+                                                                                                                                                            "gridY": 11,
+                                                                                                                                                            "connectedNodes": {
+                                                                                                                                                                "$id": 52,
+                                                                                                                                                                "$type": 18,
+                                                                                                                                                                "$rlength": 1,
+                                                                                                                                                                "$rcontent": [
+                                                                                                                                                                    {
+                                                                                                                                                                        "$id": 53,
+                                                                                                                                                                        "$type": "26|DiskCardGame.BossBattleNodeData, Assembly-CSharp",
+                                                                                                                                                                        "id": 4242,
+                                                                                                                                                                        "position": {
+                                                                                                                                                                            "$type": 20,
+                                                                                                                                                                            0.5084082,
+                                                                                                                                                                            2.66145658
+                                                                                                                                                                        },
+                                                                                                                                                                        "prefabPath": null,
+                                                                                                                                                                        "gridX": 0,
+                                                                                                                                                                        "gridY": 12,
+                                                                                                                                                                        "connectedNodes": {
+                                                                                                                                                                            "$id": 54,
+                                                                                                                                                                            "$type": 18,
+                                                                                                                                                                            "$rlength": 0,
+                                                                                                                                                                            "$rcontent": [
+                                                                                                                                                                            ]
+                                                                                                                                                                        },
+                                                                                                                                                                        "difficulty": 0,
+                                                                                                                                                                        "specialBattleId": "ProspectorBattleSequencer",
+                                                                                                                                                                        "blueprint": null,
+                                                                                                                                                                        "bossType": 3
+                                                                                                                                                                    }
+                                                                                                                                                                ]
+                                                                                                                                                            }
+                                                                                                                                                        }
+                                                                                                                                                    ]
+                                                                                                                                                },
+                                                                                                                                                "choicesType": 0,
+                                                                                                                                                "overrideChoices": null,
+                                                                                                                                                "gemifyChoices": false
+                                                                                                                                            },
+                                                                                                                                            {
+                                                                                                                                                "$id": 55,
+                                                                                                                                                "$type": 21,
+                                                                                                                                                "id": 4239,
+                                                                                                                                                "position": {
+                                                                                                                                                    "$type": 20,
+                                                                                                                                                    0.6280221,
+                                                                                                                                                    2.23808479
+                                                                                                                                                },
+                                                                                                                                                "prefabPath": null,
+                                                                                                                                                "gridX": 1,
+                                                                                                                                                "gridY": 10,
+                                                                                                                                                "connectedNodes": {
+                                                                                                                                                    "$id": 56,
+                                                                                                                                                    "$type": 18,
+                                                                                                                                                    "$rlength": 1,
+                                                                                                                                                    "$rcontent": [
+                                                                                                                                                        {
+                                                                                                                                                            "$id": 57,
+                                                                                                                                                            "$type": 25,
+                                                                                                                                                            "id": 4241,
+                                                                                                                                                            "position": {
+                                                                                                                                                                "$type": 20,
+                                                                                                                                                                0.6257828,
+                                                                                                                                                                2.441207
+                                                                                                                                                            },
+                                                                                                                                                            "prefabPath": null,
+                                                                                                                                                            "gridX": 1,
+                                                                                                                                                            "gridY": 11,
+                                                                                                                                                            "connectedNodes": {
+                                                                                                                                                                "$id": 58,
+                                                                                                                                                                "$type": 18,
+                                                                                                                                                                "$rlength": 1,
+                                                                                                                                                                "$rcontent": [
+                                                                                                                                                                    $iref:53
+                                                                                                                                                                ]
+                                                                                                                                                            }
+                                                                                                                                                        }
+                                                                                                                                                    ]
+                                                                                                                                                },
+                                                                                                                                                "choicesType": 0,
+                                                                                                                                                "overrideChoices": null,
+                                                                                                                                                "gemifyChoices": false
+                                                                                                                                            }
+                                                                                                                                        ]
+                                                                                                                                    },
+                                                                                                                                    "difficulty": 4,
+                                                                                                                                    "specialBattleId": "Tutorial4BattleSequencer",
+                                                                                                                                    "blueprint": null
+                                                                                                                                }
+                                                                                                                            ]
+                                                                                                                        }
+                                                                                                                    },
+                                                                                                                    {
+                                                                                                                        "$id": 59,
+                                                                                                                        "$type": 23,
+                                                                                                                        "id": 4236,
+                                                                                                                        "position": {
+                                                                                                                            "$type": 20,
+                                                                                                                            0.672601759,
+                                                                                                                            1.86931551
+                                                                                                                        },
+                                                                                                                        "prefabPath": null,
+                                                                                                                        "gridX": 1,
+                                                                                                                        "gridY": 8,
+                                                                                                                        "connectedNodes": {
+                                                                                                                            "$id": 60,
+                                                                                                                            "$type": 18,
+                                                                                                                            "$rlength": 1,
+                                                                                                                            "$rcontent": [
+                                                                                                                                $iref:47
+                                                                                                                            ]
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                ]
+                                                                                                            },
+                                                                                                            "choicesType": 0,
+                                                                                                            "overrideChoices": null,
+                                                                                                            "gemifyChoices": false
+                                                                                                        }
+                                                                                                    ]
+                                                                                                },
+                                                                                                "difficulty": 3,
+                                                                                                "specialBattleId": "Tutorial3BattleSequencer",
+                                                                                                "blueprint": null
+                                                                                            }
+                                                                                        ]
+                                                                                    }
+                                                                                }
+                                                                            ]
+                                                                        },
+                                                                        "choicesType": 0,
+                                                                        "overrideChoices": {
+                                                                            "$id": 61,
+                                                                            "$type": "27|System.Collections.Generic.List`1[[DiskCardGame.CardChoice, Assembly-CSharp]], mscorlib",
+                                                                            "$rlength": 2,
+                                                                            "$rcontent": [
+                                                                                {
+                                                                                    "$id": 62,
+                                                                                    "$type": "28|DiskCardGame.CardChoice, Assembly-CSharp",
+                                                                                    "tribe": 0,
+                                                                                    "resourceType": 0,
+                                                                                    "resourceAmount": 0,
+                                                                                    "isDeathcardChoice": false,
+                                                                                    "cardId": "WolfCub"
+                                                                                },
+                                                                                {
+                                                                                    "$id": 63,
+                                                                                    "$type": 28,
+                                                                                    "tribe": 0,
+                                                                                    "resourceType": 0,
+                                                                                    "resourceAmount": 0,
+                                                                                    "isDeathcardChoice": false,
+                                                                                    "cardId": "Sparrow"
+                                                                                }
+                                                                            ]
+                                                                        },
+                                                                        "gemifyChoices": false
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "difficulty": 0,
+                                                            "specialBattleId": "Tutorial2BattleSequencer",
+                                                            "blueprint": null
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "choicesType": 0,
+                                    "overrideChoices": {
+                                        "$id": 64,
+                                        "$type": 27,
+                                        "$rlength": 2,
+                                        "$rcontent": [
+                                            {
+                                                "$id": 65,
+                                                "$type": 28,
+                                                "tribe": 0,
+                                                "resourceType": 0,
+                                                "resourceAmount": 0,
+                                                "isDeathcardChoice": false,
+                                                "cardId": "Adder"
+                                            },
+                                            {
+                                                "$id": 66,
+                                                "$type": 28,
+                                                "tribe": 0,
+                                                "resourceType": 0,
+                                                "resourceAmount": 0,
+                                                "isDeathcardChoice": false,
+                                                "cardId": "Cat"
+                                            }
+                                        ]
+                                    },
+                                    "gemifyChoices": false
+                                }
+                            ]
+                        },
+                        "difficulty": 0,
+                        "specialBattleId": "Tutorial1BattleSequencer",
+                        "blueprint": null
+                    },
+                    $iref:31,
+                    $iref:33,
+                    $iref:35,
+                    $iref:37,
+                    $iref:39,
+                    $iref:41,
+                    $iref:43,
+                    $iref:45,
+                    $iref:59,
+                    $iref:47,
+                    $iref:49,
+                    $iref:55,
+                    $iref:51,
+                    $iref:57,
+                    $iref:53
+                ]
+            },
+            "sceneryRandomSeed": 2806
+        },
+        "currentNodeId": 4227,
+        "regionTier": 0,
+        "regionOrder": {
+            "$id": 67,
+            "$type": "29|System.Int32[], mscorlib",
+            "$plength": 3,
+            "$pcontent": [
+                0,
+                1,
+                2
+            ]
+        },
+        "playerAvatarHead": 4,
+        "playerAvatarArms": 5,
+        "playerAvatarBody": 4,
+        "causeOfDeath": null,
+        "gaveUp": false,
+        "completed": false,
+        "deathcardName": null
+    },
+    "pastRuns": {
+        "$id": 68,
+        "$type": "30|System.Collections.Generic.List`1[[DiskCardGame.RunState, Assembly-CSharp]], mscorlib",
+        "$rlength": 0,
+        "$rcontent": [
+        ]
+    },
+    "deathCardMods": {
+        "$id": 69,
+        "$type": 14,
+        "$rlength": 4,
+        "$rcontent": [
+            {
+                "$id": 70,
+                "$type": "31|DiskCardGame.CardModificationInfo, Assembly-CSharp",
+                "singletonId": null,
+                "nameReplacement": "Reginald",
+                "attackAdjustment": 1,
+                "healthAdjustment": 3,
+                "abilities": {
+                    "$id": 71,
+                    "$type": 6,
+                    "$rlength": 1,
+                    "$rcontent": [
+                        4
+                    ]
+                },
+                "negateAbilities": {
+                    "$id": 72,
+                    "$type": 6,
+                    "$rlength": 0,
+                    "$rcontent": [
+                    ]
+                },
+                "bloodCostAdjustment": 0,
+                "bonesCostAdjustment": 3,
+                "energyCostAdjustment": 0,
+                "nullifyGemsCost": false,
+                "addGemCost": {
+                    "$id": 73,
+                    "$type": "32|System.Collections.Generic.List`1[[DiskCardGame.GemType, Assembly-CSharp]], mscorlib",
+                    "$rlength": 0,
+                    "$rcontent": [
+                    ]
+                },
+                "gemify": false,
+                "specialAbilities": {
+                    "$id": 74,
+                    "$type": "33|System.Collections.Generic.List`1[[DiskCardGame.SpecialTriggeredAbility, Assembly-CSharp]], mscorlib",
+                    "$rlength": 0,
+                    "$rcontent": [
+                    ]
+                },
+                "statIcon": 0,
+                "fromCardMerge": false,
+                "fromDuplicateMerge": false,
+                "fromTotem": false,
+                "fromLatch": false,
+                "fromOverclock": false,
+                "sideDeckMod": false,
+                "nonCopyable": false,
+                "fromEvolve": false,
+                "transformerBeastCardId": null,
+                "deathCardInfo": {
+                    "$id": 75,
+                    "$type": "34|DiskCardGame.DeathCardInfo, Assembly-CSharp",
+                    "headType": 0,
+                    "mouthIndex": 5,
+                    "eyesIndex": 2,
+                    "lostEye": false
+                },
+                "bountyHunterInfo": null,
+                "buildACardPortraitInfo": null,
+                "decalIds": null
+            },
+            {
+                "$id": 76,
+                "$type": 31,
+                "singletonId": null,
+                "nameReplacement": "Kaycee",
+                "attackAdjustment": 1,
+                "healthAdjustment": 2,
+                "abilities": {
+                    "$id": 77,
+                    "$type": 6,
+                    "$rlength": 2,
+                    "$rcontent": [
+                        24,
+                        15
+                    ]
+                },
+                "negateAbilities": {
+                    "$id": 78,
+                    "$type": 6,
+                    "$rlength": 0,
+                    "$rcontent": [
+                    ]
+                },
+                "bloodCostAdjustment": 1,
+                "bonesCostAdjustment": 0,
+                "energyCostAdjustment": 0,
+                "nullifyGemsCost": false,
+                "addGemCost": {
+                    "$id": 79,
+                    "$type": 32,
+                    "$rlength": 0,
+                    "$rcontent": [
+                    ]
+                },
+                "gemify": false,
+                "specialAbilities": {
+                    "$id": 80,
+                    "$type": 33,
+                    "$rlength": 0,
+                    "$rcontent": [
+                    ]
+                },
+                "statIcon": 0,
+                "fromCardMerge": false,
+                "fromDuplicateMerge": false,
+                "fromTotem": false,
+                "fromLatch": false,
+                "fromOverclock": false,
+                "sideDeckMod": false,
+                "nonCopyable": false,
+                "fromEvolve": false,
+                "transformerBeastCardId": null,
+                "deathCardInfo": {
+                    "$id": 81,
+                    "$type": 34,
+                    "headType": 3,
+                    "mouthIndex": 1,
+                    "eyesIndex": 4,
+                    "lostEye": false
+                },
+                "bountyHunterInfo": null,
+                "buildACardPortraitInfo": null,
+                "decalIds": null
+            },
+            {
+                "$id": 82,
+                "$type": 31,
+                "singletonId": null,
+                "nameReplacement": "Louis",
+                "attackAdjustment": 1,
+                "healthAdjustment": 1,
+                "abilities": {
+                    "$id": 83,
+                    "$type": 6,
+                    "$rlength": 2,
+                    "$rcontent": [
+                        3,
+                        13
+                    ]
+                },
+                "negateAbilities": {
+                    "$id": 84,
+                    "$type": 6,
+                    "$rlength": 0,
+                    "$rcontent": [
+                    ]
+                },
+                "bloodCostAdjustment": 1,
+                "bonesCostAdjustment": 0,
+                "energyCostAdjustment": 0,
+                "nullifyGemsCost": false,
+                "addGemCost": {
+                    "$id": 85,
+                    "$type": 32,
+                    "$rlength": 0,
+                    "$rcontent": [
+                    ]
+                },
+                "gemify": false,
+                "specialAbilities": {
+                    "$id": 86,
+                    "$type": 33,
+                    "$rlength": 0,
+                    "$rcontent": [
+                    ]
+                },
+                "statIcon": 0,
+                "fromCardMerge": false,
+                "fromDuplicateMerge": false,
+                "fromTotem": false,
+                "fromLatch": false,
+                "fromOverclock": false,
+                "sideDeckMod": false,
+                "nonCopyable": false,
+                "fromEvolve": false,
+                "transformerBeastCardId": null,
+                "deathCardInfo": {
+                    "$id": 87,
+                    "$type": 34,
+                    "headType": 2,
+                    "mouthIndex": 2,
+                    "eyesIndex": 0,
+                    "lostEye": false
+                },
+                "bountyHunterInfo": null,
+                "buildACardPortraitInfo": null,
+                "decalIds": null
+            },
+            {
+                "$id": 88,
+                "$type": 31,
+                "singletonId": null,
+                "nameReplacement": "Kaminski",
+                "attackAdjustment": 0,
+                "healthAdjustment": 1,
+                "abilities": {
+                    "$id": 89,
+                    "$type": 6,
+                    "$rlength": 2,
+                    "$rcontent": [
+                        18,
+                        15
+                    ]
+                },
+                "negateAbilities": {
+                    "$id": 90,
+                    "$type": 6,
+                    "$rlength": 0,
+                    "$rcontent": [
+                    ]
+                },
+                "bloodCostAdjustment": 0,
+                "bonesCostAdjustment": 1,
+                "energyCostAdjustment": 0,
+                "nullifyGemsCost": false,
+                "addGemCost": {
+                    "$id": 91,
+                    "$type": 32,
+                    "$rlength": 0,
+                    "$rcontent": [
+                    ]
+                },
+                "gemify": false,
+                "specialAbilities": {
+                    "$id": 92,
+                    "$type": 33,
+                    "$rlength": 0,
+                    "$rcontent": [
+                    ]
+                },
+                "statIcon": 0,
+                "fromCardMerge": false,
+                "fromDuplicateMerge": false,
+                "fromTotem": false,
+                "fromLatch": false,
+                "fromOverclock": false,
+                "sideDeckMod": false,
+                "nonCopyable": false,
+                "fromEvolve": false,
+                "transformerBeastCardId": null,
+                "deathCardInfo": {
+                    "$id": 93,
+                    "$type": 34,
+                    "headType": 1,
+                    "mouthIndex": 3,
+                    "eyesIndex": 1,
+                    "lostEye": false
+                },
+                "bountyHunterInfo": null,
+                "buildACardPortraitInfo": null,
+                "decalIds": null
+            }
+        ]
+    },
+    "wallCandlesProgress": 0,
+    "oilPaintingState": {
+        "$id": 94,
+        "$type": "35|DiskCardGame.OilPaintingPuzzle+SaveState, Assembly-CSharp",
+        "isAscension": false,
+        "puzzleSolution": {
+            "$id": 95,
+            "$type": 8,
+            "$rlength": 4,
+            "$rcontent": [
+                null,
+                null,
+                null,
+                null
+            ]
+        },
+        "puzzleSolved": false,
+        "rewardIndex": 0,
+        "rewardTaken": false
+    },
+    "sliderTrackStates": {
+        "$id": 96,
+        "$type": "36|System.Collections.Generic.List`1[[DiskCardGame.SliderPuzzleTrack+SaveState, Assembly-CSharp]], mscorlib",
+        "$rlength": 16,
+        "$rcontent": [
+            {
+                "$id": 97,
+                "$type": "37|DiskCardGame.SliderPuzzleTrack+SaveState, Assembly-CSharp",
+                "id": "Part1_Cabin_12",
+                "sliderPositions": {
+                    "$id": 98,
+                    "$type": "38|System.Collections.Generic.List`1[[System.Int32, mscorlib]], mscorlib",
+                    "$rlength": 1,
+                    "$rcontent": [
+                        2
+                    ]
+                }
+            },
+            {
+                "$id": 99,
+                "$type": 37,
+                "id": "Part1_Cabin_31",
+                "sliderPositions": {
+                    "$id": 100,
+                    "$type": 38,
+                    "$rlength": 2,
+                    "$rcontent": [
+                        1,
+                        3
+                    ]
+                }
+            },
+            {
+                "$id": 101,
+                "$type": 37,
+                "id": "Part1_Cabin_43",
+                "sliderPositions": {
+                    "$id": 102,
+                    "$type": 38,
+                    "$rlength": 2,
+                    "$rcontent": [
+                        1,
+                        3
+                    ]
+                }
+            },
+            {
+                "$id": 103,
+                "$type": 37,
+                "id": "Part1_Cabin_233",
+                "sliderPositions": {
+                    "$id": 104,
+                    "$type": 38,
+                    "$rlength": 2,
+                    "$rcontent": [
+                        0,
+                        3
+                    ]
+                }
+            },
+            {
+                "$id": 105,
+                "$type": 37,
+                "id": "Part1_Cabin_14",
+                "sliderPositions": {
+                    "$id": 106,
+                    "$type": 38,
+                    "$rlength": 1,
+                    "$rcontent": [
+                        3
+                    ]
+                }
+            },
+            {
+                "$id": 107,
+                "$type": 37,
+                "id": "Part1_Cabin_11",
+                "sliderPositions": {
+                    "$id": 108,
+                    "$type": 38,
+                    "$rlength": 1,
+                    "$rcontent": [
+                        0
+                    ]
+                }
+            },
+            {
+                "$id": 109,
+                "$type": 37,
+                "id": "Part1_Cabin_34",
+                "sliderPositions": {
+                    "$id": 110,
+                    "$type": 38,
+                    "$rlength": 1,
+                    "$rcontent": [
+                        3
+                    ]
+                }
+            },
+            {
+                "$id": 111,
+                "$type": 37,
+                "id": "Part1_Cabin_32",
+                "sliderPositions": {
+                    "$id": 112,
+                    "$type": 38,
+                    "$rlength": 3,
+                    "$rcontent": [
+                        0,
+                        1,
+                        2
+                    ]
+                }
+            },
+            {
+                "$id": 113,
+                "$type": 37,
+                "id": "Part1_Cabin_21",
+                "sliderPositions": {
+                    "$id": 114,
+                    "$type": 38,
+                    "$rlength": 3,
+                    "$rcontent": [
+                        0,
+                        1,
+                        2
+                    ]
+                }
+            },
+            {
+                "$id": 115,
+                "$type": 37,
+                "id": "Part1_Cabin_41",
+                "sliderPositions": {
+                    "$id": 116,
+                    "$type": 38,
+                    "$rlength": 1,
+                    "$rcontent": [
+                        3
+                    ]
+                }
+            },
+            {
+                "$id": 117,
+                "$type": 37,
+                "id": "Part1_Cabin_33",
+                "sliderPositions": {
+                    "$id": 118,
+                    "$type": 38,
+                    "$rlength": 3,
+                    "$rcontent": [
+                        0,
+                        1,
+                        2
+                    ]
+                }
+            },
+            {
+                "$id": 119,
+                "$type": 37,
+                "id": "Part1_Cabin_44",
+                "sliderPositions": {
+                    "$id": 120,
+                    "$type": 38,
+                    "$rlength": 3,
+                    "$rcontent": [
+                        0,
+                        1,
+                        2
+                    ]
+                }
+            },
+            {
+                "$id": 121,
+                "$type": 37,
+                "id": "Part1_Cabin_244",
+                "sliderPositions": {
+                    "$id": 122,
+                    "$type": 38,
+                    "$rlength": 2,
+                    "$rcontent": [
+                        1,
+                        2
+                    ]
+                }
+            },
+            {
+                "$id": 123,
+                "$type": 37,
+                "id": "Part1_Cabin_13",
+                "sliderPositions": {
+                    "$id": 124,
+                    "$type": 38,
+                    "$rlength": 1,
+                    "$rcontent": [
+                        1
+                    ]
+                }
+            },
+            {
+                "$id": 125,
+                "$type": 37,
+                "id": "Part1_Cabin_42",
+                "sliderPositions": {
+                    "$id": 126,
+                    "$type": 38,
+                    "$rlength": 2,
+                    "$rcontent": [
+                        1,
+                        2
+                    ]
+                }
+            },
+            {
+                "$id": 127,
+                "$type": 37,
+                "id": "Part1_Cabin_22",
+                "sliderPositions": {
+                    "$id": 128,
+                    "$type": 38,
+                    "$rlength": 2,
+                    "$rcontent": [
+                        1,
+                        2
+                    ]
+                }
+            }
+        ]
+    },
+    "gbcData": {
+        "$id": 129,
+        "$type": "39|GBC.SaveData, Assembly-CSharp",
+        "deck": {
+            "$id": 130,
+            "$type": 10,
+            "cardIds": {
+                "$id": 131,
+                "$type": 8,
+                "$rlength": 0,
+                "$rcontent": [
+                ]
+            },
+            "boonIds": null,
+            "cardIdModInfos": {
+                "$id": 132,
+                "$type": 12,
+                "comparer": $iref:16,
+                "$rlength": 0,
+                "$rcontent": [
+                ]
+            }
+        },
+        "collection": {
+            "$id": 133,
+            "$type": "40|DiskCardGame.CardCollectionInfo, Assembly-CSharp",
+            "cardIds": {
+                "$id": 134,
+                "$type": 8,
+                "$rlength": 0,
+                "$rcontent": [
+                ]
+            }
+        },
+        "cardsViewedInCollection": {
+            "$id": 135,
+            "$type": 8,
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "currency": 0,
+        "packsOpened": 0,
+        "npcAttempts": 0,
+        "fusedCardsIndex": 0,
+        "tentacleIndex": 0,
+        "overworldNode": null,
+        "overworldScene": "GBC_WorldMap",
+        "overworldIndoorPosition": {
+            "$type": 20,
+            0,
+            0
+        },
+        "overworldIndoorLookDirection": 0,
+        "objectStates": {
+            "$id": 136,
+            "$type": "41|System.Collections.Generic.List`1[[GBC.SaveData+ObjectStateData, Assembly-CSharp]], mscorlib",
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "playerAvatarHead": 4,
+        "playerAvatarArms": 5,
+        "playerAvatarBody": 4,
+        "undeadTemple": {
+            "$id": 137,
+            "$type": "42|GBC.UndeadTempleSaveData, Assembly-CSharp",
+            "shopState": {
+                "$id": 138,
+                "$type": "43|GBC.TempleSaveData+ShopInventoryState, Assembly-CSharp",
+                "card1Progress": 0,
+                "card2Progress": 0,
+                "card3Progress": 0,
+                "card4Progress": 0
+            },
+            "cameraPosition": {
+                "$type": 20,
+                0,
+                0
+            },
+            "roomId": null,
+            "epitaphPieces": {
+                "$id": 139,
+                "$type": "44|System.Collections.Generic.List`1[[GBC.UndeadTempleSaveData+EpitaphPieceState, Assembly-CSharp]], mscorlib",
+                "$rlength": 9,
+                "$rcontent": [
+                    {
+                        "$id": 140,
+                        "$type": "45|GBC.UndeadTempleSaveData+EpitaphPieceState, Assembly-CSharp",
+                        "index": 0,
+                        "found": false,
+                        "placed": false,
+                        "tombstoneIndex": 0
+                    },
+                    {
+                        "$id": 141,
+                        "$type": 45,
+                        "index": 1,
+                        "found": false,
+                        "placed": false,
+                        "tombstoneIndex": 0
+                    },
+                    {
+                        "$id": 142,
+                        "$type": 45,
+                        "index": 2,
+                        "found": false,
+                        "placed": false,
+                        "tombstoneIndex": 0
+                    },
+                    {
+                        "$id": 143,
+                        "$type": 45,
+                        "index": 3,
+                        "found": false,
+                        "placed": false,
+                        "tombstoneIndex": 0
+                    },
+                    {
+                        "$id": 144,
+                        "$type": 45,
+                        "index": 4,
+                        "found": false,
+                        "placed": false,
+                        "tombstoneIndex": 0
+                    },
+                    {
+                        "$id": 145,
+                        "$type": 45,
+                        "index": 5,
+                        "found": false,
+                        "placed": false,
+                        "tombstoneIndex": 0
+                    },
+                    {
+                        "$id": 146,
+                        "$type": 45,
+                        "index": 6,
+                        "found": false,
+                        "placed": false,
+                        "tombstoneIndex": 0
+                    },
+                    {
+                        "$id": 147,
+                        "$type": 45,
+                        "index": 7,
+                        "found": false,
+                        "placed": false,
+                        "tombstoneIndex": 0
+                    },
+                    {
+                        "$id": 148,
+                        "$type": 45,
+                        "index": 8,
+                        "found": false,
+                        "placed": false,
+                        "tombstoneIndex": 0
+                    }
+                ]
+            }
+        },
+        "natureTemple": {
+            "$id": 149,
+            "$type": "46|GBC.NatureTempleSaveData, Assembly-CSharp",
+            "shopState": {
+                "$id": 150,
+                "$type": 43,
+                "card1Progress": 0,
+                "card2Progress": 0,
+                "card3Progress": 0,
+                "card4Progress": 0
+            },
+            "cameraPosition": {
+                "$type": 20,
+                0,
+                0
+            },
+            "roomId": null,
+            "hasCamera": false,
+            "hookedShark": false,
+            "trappedRabbit": false,
+            "trapPosition": {
+                "$type": 20,
+                0,
+                0
+            },
+            "trapperHeadTurned": false,
+            "safeState": {
+                "$id": 151,
+                "$type": "47|GBC.TempleSaveData+SlidersSaveState, Assembly-CSharp",
+                "index": 0,
+                "sliderPositions": {
+                    "$id": 152,
+                    "$type": 29,
+                    "$plength": 3,
+                    "$pcontent": [
+                        0,
+                        0,
+                        0
+                    ]
+                }
+            }
+        },
+        "wizardTemple": {
+            "$id": 153,
+            "$type": "48|GBC.WizardTempleSaveData, Assembly-CSharp",
+            "shopState": {
+                "$id": 154,
+                "$type": 43,
+                "card1Progress": 0,
+                "card2Progress": 0,
+                "card3Progress": 0,
+                "card4Progress": 0
+            },
+            "cameraPosition": {
+                "$type": 20,
+                0,
+                0
+            },
+            "roomId": null,
+            "pedestals": {
+                "$id": 155,
+                "$type": "49|System.Collections.Generic.List`1[[GBC.TempleSaveData+SlidersSaveState, Assembly-CSharp]], mscorlib",
+                "$rlength": 3,
+                "$rcontent": [
+                    {
+                        "$id": 156,
+                        "$type": 47,
+                        "index": 0,
+                        "sliderPositions": {
+                            "$id": 157,
+                            "$type": 29,
+                            "$plength": 3,
+                            "$pcontent": [
+                                3,
+                                1,
+                                4
+                            ]
+                        }
+                    },
+                    {
+                        "$id": 158,
+                        "$type": 47,
+                        "index": 0,
+                        "sliderPositions": {
+                            "$id": 159,
+                            "$type": 29,
+                            "$plength": 3,
+                            "$pcontent": [
+                                3,
+                                1,
+                                4
+                            ]
+                        }
+                    },
+                    {
+                        "$id": 160,
+                        "$type": 47,
+                        "index": 0,
+                        "sliderPositions": {
+                            "$id": 161,
+                            "$type": 29,
+                            "$plength": 3,
+                            "$pcontent": [
+                                3,
+                                1,
+                                4
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "techTemple": {
+            "$id": 162,
+            "$type": "50|GBC.TechTempleSaveData, Assembly-CSharp",
+            "shopState": {
+                "$id": 163,
+                "$type": 43,
+                "card1Progress": 0,
+                "card2Progress": 0,
+                "card3Progress": 0,
+                "card4Progress": 0
+            },
+            "cameraPosition": {
+                "$type": 20,
+                0,
+                0
+            },
+            "roomId": null
+        }
+    },
+    "part3Data": {
+        "$id": 164,
+        "$type": "51|DiskCardGame.Part3SaveData, Assembly-CSharp",
+        "deck": {
+            "$id": 165,
+            "$type": 10,
+            "cardIds": {
+                "$id": 166,
+                "$type": 8,
+                "$rlength": 4,
+                "$rcontent": [
+                    "BatteryBot",
+                    "Shieldbot",
+                    "Sniper",
+                    "CloserBot"
+                ]
+            },
+            "boonIds": null,
+            "cardIdModInfos": {
+                "$id": 167,
+                "$type": 12,
+                "comparer": $iref:16,
+                "$rlength": 4,
+                "$rcontent": [
+                    {
+                        "$k": "BatteryBot",
+                        "$v": {
+                            "$id": 168,
+                            "$type": 14,
+                            "$rlength": 0,
+                            "$rcontent": [
+                            ]
+                        }
+                    },
+                    {
+                        "$k": "Shieldbot",
+                        "$v": {
+                            "$id": 169,
+                            "$type": 14,
+                            "$rlength": 0,
+                            "$rcontent": [
+                            ]
+                        }
+                    },
+                    {
+                        "$k": "Sniper",
+                        "$v": {
+                            "$id": 170,
+                            "$type": 14,
+                            "$rlength": 0,
+                            "$rcontent": [
+                            ]
+                        }
+                    },
+                    {
+                        "$k": "CloserBot",
+                        "$v": {
+                            "$id": 171,
+                            "$type": 14,
+                            "$rlength": 0,
+                            "$rcontent": [
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "riggedDraws": {
+            "$id": 172,
+            "$type": 8,
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "currency": 0,
+        "shopNodeCostModifier": 0,
+        "deckGemsDistribution": {
+            "$id": 173,
+            "$type": 29,
+            "$plength": 3,
+            "$pcontent": [
+                3,
+                3,
+                4
+            ]
+        },
+        "sideDeckAbilities": {
+            "$id": 174,
+            "$type": 6,
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "playerLives": 1,
+        "playerMaxLives": 1,
+        "items": {
+            "$id": 175,
+            "$type": 8,
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "unlockedItems": {
+            "$id": 176,
+            "$type": "52|System.Collections.Generic.List`1[[DiskCardGame.Part3SaveData+ItemUnlock, Assembly-CSharp]], mscorlib",
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "areaData": {
+            "$id": 177,
+            "$type": "53|System.Collections.Generic.List`1[[DiskCardGame.Part3SaveData+MapAreaStateData, Assembly-CSharp]], mscorlib",
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "playerPos": {
+            "$id": 178,
+            "$type": "54|DiskCardGame.Part3SaveData+WorldPosition, Assembly-CSharp",
+            "worldId": "StartingArea",
+            "gridX": 2,
+            "gridY": 0
+        },
+        "checkpointPos": {
+            "$id": 179,
+            "$type": 54,
+            "worldId": "StartingArea",
+            "gridX": 2,
+            "gridY": 0
+        },
+        "bloodstainPos": null,
+        "bloodstainCurrency": 0,
+        "bounty": 0,
+        "battlesSinceBountyHunter": 0,
+        "bountyHunterMods": {
+            "$id": 180,
+            "$type": 14,
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "reachedCheckpoints": {
+            "$id": 181,
+            "$type": 8,
+            "$rlength": 1,
+            "$rcontent": [
+                "StartingArea"
+            ]
+        },
+        "nodesActivated": 0,
+        "pelts": 0,
+        "collectedTarots": {
+            "$id": 182,
+            "$type": "55|System.Collections.Generic.List`1[[DiskCardGame.TraderTarotType, Assembly-CSharp]], mscorlib",
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "lukeFileIndex": 0,
+        "deletedFilePath": null,
+        "canvasBossEyeIndex": -1,
+        "canvasBossMouthIndex": -1,
+        "foundUndeadTempleQuill": false,
+        "wellDredgedQuill": false,
+        "wellDredgedCoin": false,
+        "undeadTempleSignedScroll": false,
+        "techAreaSatellitesOn": {
+            "$id": 183,
+            "$type": "56|System.Boolean[], mscorlib",
+            "$plength": 4,
+            "$pcontent": [
+                false,
+                false,
+                false,
+                false
+            ]
+        },
+        "techElevatorOn": false
+    },
+    "grimoraData": {
+        "$id": 184,
+        "$type": "57|DiskCardGame.GrimoraSaveData, Assembly-CSharp",
+        "gridX": 1,
+        "gridY": 6,
+        "removedPieces": {
+            "$id": 185,
+            "$type": 38,
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "deck": {
+            "$id": 186,
+            "$type": 10,
+            "cardIds": {
+                "$id": 187,
+                "$type": 8,
+                "$rlength": 5,
+                "$rcontent": [
+                    "Gravedigger",
+                    "Gravedigger",
+                    "Gravedigger",
+                    "FrankNStein",
+                    "FrankNStein"
+                ]
+            },
+            "boonIds": null,
+            "cardIdModInfos": {
+                "$id": 188,
+                "$type": 12,
+                "comparer": $iref:16,
+                "$rlength": 5,
+                "$rcontent": [
+                    {
+                        "$k": "Gravedigger",
+                        "$v": {
+                            "$id": 189,
+                            "$type": 14,
+                            "$rlength": 0,
+                            "$rcontent": [
+                            ]
+                        }
+                    },
+                    {
+                        "$k": "Gravedigger#1",
+                        "$v": {
+                            "$id": 190,
+                            "$type": 14,
+                            "$rlength": 0,
+                            "$rcontent": [
+                            ]
+                        }
+                    },
+                    {
+                        "$k": "Gravedigger#2",
+                        "$v": {
+                            "$id": 191,
+                            "$type": 14,
+                            "$rlength": 0,
+                            "$rcontent": [
+                            ]
+                        }
+                    },
+                    {
+                        "$k": "FrankNStein",
+                        "$v": {
+                            "$id": 192,
+                            "$type": 14,
+                            "$rlength": 0,
+                            "$rcontent": [
+                            ]
+                        }
+                    },
+                    {
+                        "$k": "FrankNStein#1",
+                        "$v": {
+                            "$id": 193,
+                            "$type": 14,
+                            "$rlength": 0,
+                            "$rcontent": [
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "gbcCardsCollected": {
+        "$id": 194,
+        "$type": 8,
+        "$rlength": 0,
+        "$rcontent": [
+        ]
+    },
+    "ouroborosDeaths": 0,
+    "unlockedAchievements": {
+        "$id": 195,
+        "$type": "58|System.Collections.Generic.List`1[[Achievement, Assembly-CSharp]], mscorlib",
+        "$rlength": 0,
+        "$rcontent": [
+        ]
+    },
+    "ascensionData": {
+        "$id": 196,
+        "$type": "59|DiskCardGame.AscensionSaveData, Assembly-CSharp",
+        "dialogueData": {
+            "$id": 197,
+            "$type": 3,
+            "eventData": {
+                "$id": 198,
+                "$type": 4,
+                "$rlength": 0,
+                "$rcontent": [
+                ]
+            }
+        },
+        "progressionData": {
+            "$id": 199,
+            "$type": 5,
+            "learnedAbilities": {
+                "$id": 200,
+                "$type": 6,
+                "$rlength": 30,
+                "$rcontent": [
+                    19,
+                    76,
+                    75,
+                    31,
+                    29,
+                    26,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10,
+                    11,
+                    12,
+                    13,
+                    14,
+                    15,
+                    16,
+                    17,
+                    18,
+                    20,
+                    21,
+                    22,
+                    23,
+                    24,
+                    25
+                ]
+            },
+            "learnedMechanics": {
+                "$id": 201,
+                "$type": 7,
+                "$rlength": 0,
+                "$rcontent": [
+                ]
+            },
+            "learnedCards": {
+                "$id": 202,
+                "$type": 8,
+                "$rlength": 0,
+                "$rcontent": [
+                ]
+            },
+            "introducedCards": {
+                "$id": 203,
+                "$type": 8,
+                "$rlength": 0,
+                "$rcontent": [
+                ]
+            },
+            "introducedConsumables": {
+                "$id": 204,
+                "$type": 8,
+                "$rlength": 0,
+                "$rcontent": [
+                ]
+            }
+        },
+        "stats": {
+            "$id": 205,
+            "$type": "60|DiskCardGame.AscensionStatsData, Assembly-CSharp",
+            "currentRunStats": {
+                "$id": 206,
+                "$type": "61|System.Collections.Generic.List`1[[DiskCardGame.AscensionStat, Assembly-CSharp]], mscorlib",
+                "$rlength": 0,
+                "$rcontent": [
+                ]
+            },
+            "allTimeStats": {
+                "$id": 207,
+                "$type": 61,
+                "$rlength": 0,
+                "$rcontent": [
+                ]
+            }
+        },
+        "challengeLevel": 1,
+        "itemUnlockEvents": {
+            "$id": 208,
+            "$type": 2,
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "activeChallenges": {
+            "$id": 209,
+            "$type": "62|System.Collections.Generic.List`1[[DiskCardGame.AscensionChallenge, Assembly-CSharp]], mscorlib",
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "conqueredChallenges": {
+            "$id": 210,
+            "$type": 62,
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "currentStarterDeck": "Vanilla",
+        "conqueredStarterDecks": {
+            "$id": 211,
+            "$type": 8,
+            "$rlength": 0,
+            "$rcontent": [
+            ]
+        },
+        "currentRun": null,
+        "currentRunSeed": 0,
+        "currentOuroborosDeaths": 0,
+        "numRunsSinceReachedFirstBoss": 0,
+        "oilPaintingState": {
+            "$id": 212,
+            "$type": 35,
+            "isAscension": true,
+            "puzzleSolution": null,
+            "puzzleSolved": false,
+            "rewardIndex": 0,
+            "rewardTaken": false
+        },
+        "gramophoneTrackIndex": 0,
+        "playerAvatarHead": 1,
+        "playerAvatarArms": 7,
+        "playerAvatarBody": 6
+    },
+    "ascensionActive": false
+}
