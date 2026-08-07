@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.IO.Compression;
@@ -188,6 +187,8 @@ namespace SaveSlotsMod
                     Plugin.Log.LogInfo($"[SaveSlotManager] Восстановили Слот {ActiveSlot + 1} → живое сохранение.");
                 }
             }
+
+            RefreshStoredActLabels();
 
             // ── Подписываемся на выход из приложения ──────────────────────────────
             Application.quitting -= OnApplicationQuitting;
@@ -430,11 +431,8 @@ namespace SaveSlotsMod
         /// </summary>
         private static int DetectPart1Progression(string json)
         {
-            // Логируем первые 2000 символов JSON для диагностики
-            Plugin.Log.LogInfo($"[SaveSlotManager] DetectPart1Progression: JSON (первые 2000): {json.Substring(0, Math.Min(2000, json.Length))}");
-
-            // 1) Проверяем completedEvents в сейве.
-            //    TutorialRun3Completed (38) = обучение завершено → Акт 1.
+            // completedEvents — подтверждённый игровой маркер того, что
+            // обучающие забеги завершены и Леший больше не обучает игрока.
             var events = ParseCompletedEvents(json);
             if (events != null)
             {
@@ -444,75 +442,18 @@ namespace SaveSlotsMod
                     Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: event 38 found → Акт 1");
                     return 1;
                 }
-                // Если есть события с номером > 38 — точно не обучение
-                if (events.Exists(e => e > StoryEvent_TutorialRun3Completed))
-                {
-                    Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: events > 38 found → Акт 1");
-                    return 1;
-                }
-                // Если есть вообще любые события — скорее всего Act 1 через chapter select
-                if (events.Count > 0)
-                {
-                    Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: events exist but 38 missing → Акт 1 (chapter select)");
-                    return 1;
-                }
-                Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: completedEvents empty, trying fallbacks...");
+                Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: событие завершения обучения не найдено.");
             }
             else
             {
-                Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: completedEvents not found in JSON, trying fallbacks...");
+                Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: completedEvents не найдено.");
             }
 
-            // 2) part1Data с currency > 0 — игрок заработал кости.
-            if (Regex.IsMatch(json, @"""part1Data""\s*:\s*\{[^}]*""currency""\s*:\s*[1-9]"))
-            {
-                Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: part1Data.currency > 0 → Акт 1");
-                return 1;
-            }
-
-            // 3) currentLoop — обучение это циклы 1–3, Акт 1 начинается с цикла 4.
-            var loopMatch = Regex.Match(json, @"""currentLoop""\s*:\s*(\d+)");
-            int loop = -1;
-            if (loopMatch.Success && int.TryParse(loopMatch.Groups[1].Value, out loop))
-            {
-                Plugin.Log.LogInfo($"[SaveSlotManager] DetectPart1Progression: currentLoop={loop}");
-                if (loop >= 4)
-                {
-                    Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: currentLoop >= 4 → Акт 1");
-                    return 1;
-                }
-            }
-
-            // 4) playTime.
-            float pt = -1f;
-            var playTimeMatch = Regex.Match(json, @"""playTime""\s*:\s*([0-9]+(?:\.[0-9]+)?)");
-            if (playTimeMatch.Success && float.TryParse(playTimeMatch.Groups[1].Value,
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out pt))
-            {
-                Plugin.Log.LogInfo($"[SaveSlotManager] DetectPart1Progression: playTime={pt}");
-            }
-
-            // 5) Обучение (Акт 0) — ТОЛЬКО если все признаки обучения совпадают:
-            //    - currentLoop 1–3 (или не найден)
-            //    - completedEvents пустой или null
-            //    - playTime < 30 секунд (или не найден)
-            //    - currency == 0
-            //    Если хотя бы одно условие не выполняется — это Акт 1.
-            bool isTutorial = true;
-            if (loop > 3) isTutorial = false;
-            if (events != null && events.Count > 0) isTutorial = false;
-            if (pt > 30f) isTutorial = false;
-
-            if (isTutorial)
-            {
-                Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: all tutorial indicators match → Акт 0");
-                return 0;
-            }
-
-            // 6) По умолчанию — Акт 1.
-            Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: not tutorial → Акт 1");
-            return 1;
+            // Без подтверждённого события сохранение остаётся Актом 0.
+            // Время, валюту и номер цикла нельзя использовать как замену
+            // сюжетному событию: они не означают, что реплика Лешего уже была.
+            Plugin.Log.LogInfo("[SaveSlotManager] DetectPart1Progression: событие завершения обучения не найдено → Акт 0");
+            return 0;
         }
 
         /// <summary>
@@ -524,7 +465,12 @@ namespace SaveSlotsMod
         {
             try
             {
-                var match = Regex.Match(json, @"""completedEvents""\s*:\s*\[([^\]]*)\]");
+                var match = Regex.Match(
+                    json,
+                    @"""completedEvents""\s*:\s*\{.*?""\$rcontent""\s*:\s*\[([^\]]*)\]",
+                    RegexOptions.Singleline);
+                if (!match.Success)
+                    match = Regex.Match(json, @"""completedEvents""\s*:\s*\[([^\]]*)\]");
                 if (!match.Success) return null;
 
                 var result = new List<int>();
@@ -536,6 +482,29 @@ namespace SaveSlotsMod
                 return result;
             }
             catch { return null; }
+        }
+
+        /// <summary>
+        /// Пересчитывает метку Акта у уже существующих слотов после обновления
+        /// логики определения прогресса. Остальные метаданные не изменяются.
+        /// </summary>
+        private static void RefreshStoredActLabels()
+        {
+            for (int slot = 0; slot < MaxSlots; slot++)
+            {
+                if (!SlotHasSave(slot)) continue;
+
+                var existing = LoadSlotMeta(slot);
+                if (existing == null) continue;
+
+                int detectedAct = ParseSaveAct(SlotSaveFile(slot));
+                if (detectedAct < 0 || detectedAct == existing.Act) continue;
+
+                existing.Act = detectedAct;
+                SaveSlotMeta(slot, existing);
+                Plugin.Log.LogInfo(
+                    $"[SaveSlotManager] Обновлена метка Акта для Слота {slot + 1}: {GetActLabel(detectedAct)}.");
+            }
         }
 
         /// <summary>
@@ -744,12 +713,48 @@ namespace SaveSlotsMod
         {
             var current = GetCurrentModGuids();
             var saved   = LoadSlotMeta(slot)?.ModGuids ?? new List<string>();
+            var currentSet = new HashSet<string>(current, StringComparer.Ordinal);
+            var savedSet = new HashSet<string>(saved, StringComparer.Ordinal);
+
+            var added = currentSet.Except(savedSet).OrderBy(g => g).ToList();
+            var removed = savedSet.Except(currentSet).OrderBy(g => g).ToList();
+            bool same = added.Count == 0 && removed.Count == 0;
+
+            Plugin.Log.LogInfo(
+                $"[SaveSlotManager] ComputeDiff: Слот {slot + 1}, сохранено модов={savedSet.Count}, сейчас={currentSet.Count}, совпадают={same}.");
+
             return new ModDiff
             {
-                Added   = current.Except(saved).ToList(),
-                Removed = saved.Except(current).ToList(),
-                Same    = current.SequenceEqual(saved)
+                Added   = added,
+                Removed = removed,
+                Same    = same
             };
+        }
+
+        /// <summary>
+        /// Запоминает набор модов, с которым пользователь подтвердил вход
+        /// в существующий слот. До подтверждения старый набор не меняется,
+        /// чтобы проверка при следующем выборе сравнивала именно последний
+        /// подтверждённый вход.
+        /// </summary>
+        public static void RememberCurrentModsForSlot(int slot)
+        {
+            if (slot < 0 || slot >= MaxSlots || !SlotHasSave(slot))
+                return;
+
+            var meta = LoadSlotMeta(slot);
+            if (meta == null)
+                return;
+
+            var current = GetCurrentModGuids();
+            var saved = meta.ModGuids ?? new List<string>();
+            if (saved.SequenceEqual(current))
+                return;
+
+            meta.ModGuids = current;
+            SaveSlotMeta(slot, meta);
+            Plugin.Log.LogInfo(
+                $"[SaveSlotManager] Слот {slot + 1}: сохранён новый набор модов ({current.Count}) после подтверждённого входа.");
         }
 
         // ── Удаление слота ────────────────────────────────────────────────────────

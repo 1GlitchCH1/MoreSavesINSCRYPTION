@@ -468,12 +468,6 @@ namespace SaveSlotsMod
         // ── Обработка выбора слота ────────────────────────────────────────────────
         private void OnSlotChosen(int slot, bool isEmpty)
         {
-            if (slot == SaveSlotManager.ActiveSlot)
-            {
-                DoSwitch(slot, isEmpty);
-                return;
-            }
-
             if (!isEmpty)
             {
                 var diff = SaveSlotManager.ComputeDiff(slot);
@@ -498,6 +492,9 @@ namespace SaveSlotsMod
                 Plugin.Log.LogError($"[SlotUI] SwitchToSlot({slot}) failed: {ex}");
                 return;
             }
+
+            if (!isEmpty)
+                SaveSlotManager.RememberCurrentModsForSlot(slot);
 
             // Запускаем cooldown ПЕРЕД уничтожением пикера — блокируем паразитные
             // вызовы OnStartGameCardReachedSlot от анимации меню.
